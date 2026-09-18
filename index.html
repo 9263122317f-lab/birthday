@@ -845,7 +845,6 @@ function openAdd() {
   document.getElementById('form-title').textContent = 'Добавить';
   document.getElementById('f-name').value = '';
   document.getElementById('f-date').value = '';
-  document.getElementById('f-year').value = '';
   document.getElementById('f-gift').value = '';
   document.getElementById('delete-btn').classList.add('hidden');
   // reset notify — only day-of selected
@@ -897,7 +896,7 @@ function savePerson() {
   save();
 
   // notify bot (if in TG)
-  tgSendData({ action: editingId ? 'update' : 'add', name, date: stored, notify });
+  tgSendData({ action: editingId ? 'update' : 'add', name, date, notify });
 
   showScreen('list');
   editingId = null;
