@@ -6,507 +6,325 @@
 <title>Дни рождения</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  @font-face {
-    font-family: 'Migra';
-    src: url('Migra-Medium.ttf') format('truetype');
-    font-weight: 500;
-  }
-  @font-face {
-    font-family: 'Kinetika';
-    src: url('kinetika-medium.ttf') format('truetype');
-    font-weight: 500;
-  }
-</style>
-<style>
-  :root {
-    --bg: #0A0A0A;
-    --card: linear-gradient(135deg, #090909 0%, #191818 100%);
-    --border: #1B1B1B;
-    --circle: #1F1F1F;
-    --arrow: rgba(255,255,255,0.5);
-    --text: #FFFFFF;
-    --text-muted: rgba(255,255,255,0.4);
-    --radius: 20px;
-    --radius-sm: 14px;
-  }
+@font-face {
+  font-family: 'Migra';
+  src: url('Migra-Medium.ttf') format('truetype');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Kinetika';
+  src: url('kinetika-medium.ttf') format('truetype');
+  font-weight: 500;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #0A0A0A;
+  --card: linear-gradient(135deg, #090909 0%, #191818 100%);
+  --border: #1B1B1B;
+  --circle: #1F1F1F;
+  --text: #FFFFFF;
+  --text-muted: rgba(255,255,255,0.4);
+  --radius: 20px;
+  --radius-sm: 14px;
+}
 
-  body {
-    font-family: 'Kinetika', -apple-system, BlinkMacSystemFont, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-  .screen { display: none; flex-direction: column; min-height: 100vh; }
-  .screen.active { display: flex; }
-  .hidden { display: none !important; }
+body {
+  font-family: 'Kinetika', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 
-  /* ── TYPOGRAPHY ── */
-  .title-serif {
-    font-family: 'Migra', 'Georgia', serif;
-    font-weight: 400;
-    letter-spacing: -0.5px;
-  }
+.screen { display: none; flex-direction: column; min-height: 100vh; animation: fadeIn 0.22s ease; }
+.screen.active { display: flex; }
+.hidden { display: none !important; }
 
-  /* ── HEADER ── */
-  .header {
-    padding: 20px 20px 16px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .header-back {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: var(--circle);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0;
-    transition: opacity 0.15s;
-  }
-  .header-back:active { opacity: 0.6; }
-  .header-back svg { stroke: var(--arrow); }
-  .header-title {
-    font-size: 16px;
-    font-weight: 500;
-    flex: 1;
-    color: var(--text-muted);
-  }
-  .header-action {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 6px 0;
-    transition: color 0.15s;
-  }
-  .header-action:active { color: var(--text); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-  /* ── LIST TOP ── */
-  .list-top { padding: 28px 20px 20px; }
-  .list-eyebrow {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-  .list-title {
-    font-size: 36px;
-    line-height: 1.05;
-  }
-  .list-subtitle {
-    margin-top: 6px;
-    font-size: 14px;
-    color: var(--text-muted);
-  }
+.title-serif { font-family: 'Migra', 'Georgia', serif; font-weight: 400; letter-spacing: -0.5px; }
 
-  /* ── NEXT BANNER ── */
-  .next-banner {
-    margin: 0 20px 20px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .next-banner-emoji { font-size: 30px; flex-shrink: 0; }
-  .next-banner-info { flex: 1; min-width: 0; }
-  .next-banner-name {
-    font-size: 16px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .next-banner-days {
-    margin-top: 3px;
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-  .next-banner-arrow {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: var(--circle);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
+/* HEADER */
+.header { padding: 20px 20px 16px; display: flex; align-items: center; gap: 14px; }
+.header-back {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--circle); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: opacity 0.15s;
+}
+.header-back:active { opacity: 0.6; }
+.header-back svg { stroke: rgba(255,255,255,0.5); }
+.header-title { font-size: 16px; font-weight: 500; flex: 1; color: var(--text-muted); }
+.header-action { font-size: 14px; font-weight: 500; color: var(--text-muted); cursor: pointer; padding: 6px 0; transition: color 0.15s; }
+.header-action:active { color: var(--text); }
 
-  /* ── SEARCH ── */
-  .search-wrap {
-    position: relative;
-    padding: 0 20px 16px;
-  }
-  .search-icon {
-    position: absolute;
-    left: 34px; top: 50%;
-    transform: translateY(-60%);
-    opacity: 0.3;
-    pointer-events: none;
-  }
-  .search-input {
-    width: 100%;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px 12px 38px;
-    color: var(--text);
-    font-size: 15px;
-    outline: none;
-    font-family: inherit;
-  }
-  .search-input::placeholder { color: var(--text-muted); }
+/* LIST TOP */
+.list-top { padding: 28px 20px 20px; }
+.list-eyebrow { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.list-title { font-size: 36px; line-height: 1.05; }
+.list-subtitle { margin-top: 6px; font-size: 14px; color: var(--text-muted); }
 
-  /* ── TABS ── */
-  .tabs {
-    display: flex;
-    gap: 8px;
-    padding: 0 20px 18px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex-shrink: 0;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    padding: 7px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    font-family: inherit;
-  }
-  .tab.active {
-    background: var(--text);
-    border-color: var(--text);
-    color: #0A0A0A;
-  }
+/* NEXT BANNER */
+.next-banner {
+  margin: 0 20px 20px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+  cursor: pointer; transition: opacity 0.15s; animation: slideUp 0.3s ease;
+}
+.next-banner:active { opacity: 0.7; }
+.next-banner-emoji { font-size: 30px; flex-shrink: 0; }
+.next-banner-info { flex: 1; min-width: 0; }
+.next-banner-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.next-banner-days { margin-top: 3px; font-size: 13px; color: var(--text-muted); }
+.next-banner-arrow {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--circle); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 
-  /* ── SECTION LABEL ── */
-  .section-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0 20px;
-    margin: 14px 0 10px;
-  }
+/* SEARCH */
+.search-wrap { position: relative; padding: 0 20px 16px; }
+.search-icon { position: absolute; left: 34px; top: 50%; transform: translateY(-60%); opacity: 0.3; pointer-events: none; }
+.search-input {
+  width: 100%; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px 12px 38px;
+  color: var(--text); font-size: 15px; outline: none; font-family: inherit;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: rgba(255,255,255,0.15); }
+.search-input::placeholder { color: var(--text-muted); }
 
-  /* ── PEOPLE LIST ── */
-  .people-list {
-    flex: 1;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+/* TABS */
+.tabs { display: flex; gap: 8px; padding: 0 20px 18px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex-shrink: 0; background: transparent; border: 1px solid var(--border);
+  border-radius: 100px; padding: 7px 16px; font-size: 13px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; transition: all 0.18s; font-family: inherit;
+}
+.tab.active { background: var(--text); border-color: var(--text); color: #0A0A0A; }
 
-  .person-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: opacity 0.12s;
-    position: relative;
-    overflow: hidden;
-  }
-  .person-card:active { opacity: 0.7; }
+/* FOLDERS */
+.folders-wrap { padding: 0 20px 16px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.folders-wrap::-webkit-scrollbar { display: none; }
+.folder-chip {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 100px; padding: 7px 14px; font-size: 13px;
+  color: var(--text-muted); cursor: pointer; transition: all 0.18s; font-family: inherit;
+  white-space: nowrap;
+}
+.folder-chip.active { border-color: rgba(255,255,255,0.25); color: var(--text); }
+.folder-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.folder-add {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: opacity 0.15s; color: var(--text-muted);
+  font-size: 18px; line-height: 1;
+}
+.folder-add:active { opacity: 0.6; }
 
-  .person-avatar {
-    width: 46px; height: 46px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    font-weight: 600;
-    flex-shrink: 0;
-    border: 1px solid var(--border);
-  }
-  .person-info { flex: 1; min-width: 0; }
-  .person-name {
-    font-size: 16px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .person-date {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .person-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  .badge-wrap { text-align: right; }
-  .badge-days {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
-    font-family: 'Migra', 'Georgia', serif;
-  }
-  .badge-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .badge-today-color { color: #fff; }
-  .badge-soon-color { color: rgba(255,255,255,0.8); }
-  .badge-normal-color { color: rgba(255,255,255,0.5); }
+/* SECTION LABEL */
+.section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 20px; margin: 14px 0 10px; }
 
-  .arrow-btn {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: var(--circle);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
+/* PEOPLE LIST */
+.people-list { flex: 1; padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
 
-  /* ── FAB ── */
-  .fab {
-    position: fixed;
-    right: 20px; bottom: calc(28px + env(safe-area-inset-bottom, 0px));
-    width: 56px; height: 56px;
-    background: #FFFFFF;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
-    transition: transform 0.15s;
-    z-index: 100;
-  }
-  .fab:active { transform: scale(0.92); }
-  .fab svg { stroke: #0A0A0A; }
+.person-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+  cursor: pointer; transition: opacity 0.12s; position: relative; overflow: hidden;
+  animation: pop 0.22s ease;
+}
+.person-card:active { opacity: 0.7; }
+.person-card-folder { position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 20px 0 0 20px; }
 
-  .list-bottom-pad { height: 100px; }
+.person-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 600; flex-shrink: 0; border: 1px solid var(--border);
+}
+.person-info { flex: 1; min-width: 0; }
+.person-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-date { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.person-folder-tag { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
-  /* ── EMPTY STATE ── */
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 40px 30px;
-    text-align: center;
-  }
-  .empty-emoji { font-size: 48px; margin-bottom: 4px; }
-  .empty-title { font-size: 20px; font-weight: 600; }
-  .empty-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+.person-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.badge-wrap { text-align: right; }
+.badge-days { font-size: 20px; font-weight: 700; line-height: 1; font-family: 'Migra', 'Georgia', serif; }
+.badge-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-today-color { color: #fff; }
+.badge-soon-color { color: rgba(255,255,255,0.8); }
+.badge-normal-color { color: rgba(255,255,255,0.5); }
 
-  /* ── FORM ── */
-  .form-body { flex: 1; padding: 8px 20px 32px; overflow-y: auto; }
+.arrow-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--circle); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 
-  .form-section { margin-bottom: 28px; }
-  .form-section-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 12px;
-  }
+/* FAB */
+.fab {
+  position: fixed; right: 20px; bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: 56px; height: 56px; background: #FFFFFF; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  transition: transform 0.15s; z-index: 100;
+}
+.fab:active { transform: scale(0.92); }
+.fab svg { stroke: #0A0A0A; }
 
-  .field {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    margin-bottom: 8px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .field:focus-within { border-color: rgba(255,255,255,0.2); }
-  .field-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-muted);
-    padding: 12px 16px 0;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .field input, .field textarea {
-    width: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-size: 15px;
-    font-family: inherit;
-    padding: 6px 16px 12px;
-  }
-  .field input::placeholder, .field textarea::placeholder { color: var(--text-muted); }
-  .field textarea { resize: none; min-height: 88px; }
+.list-bottom-pad { height: 100px; }
 
-  /* ── NOTIFY OPTIONS ── */
-  .notify-options { display: flex; flex-direction: column; gap: 8px; }
-  .notify-option {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .notify-option.selected { border-color: rgba(255,255,255,0.25); }
-  .notify-option-left { display: flex; align-items: center; gap: 12px; }
-  .notify-option-icon { font-size: 20px; }
-  .notify-option-text { font-size: 14px; font-weight: 500; }
-  .notify-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .notify-check {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
-  .notify-option.selected .notify-check {
-    background: #fff;
-    border-color: #fff;
-  }
-  .notify-option.selected .notify-check svg { stroke: #0A0A0A; }
-  .notify-check svg { stroke: transparent; }
+/* EMPTY */
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px 30px; text-align: center; animation: fadeIn 0.3s ease; }
+.empty-emoji { font-size: 48px; margin-bottom: 4px; }
+.empty-title { font-size: 20px; font-weight: 600; }
+.empty-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
 
-  /* ── BUTTONS ── */
-  .save-btn {
-    width: 100%;
-    background: #FFFFFF;
-    color: #0A0A0A;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 16px;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: opacity 0.15s;
-    letter-spacing: 0.01em;
-  }
-  .save-btn:active { opacity: 0.8; }
+/* FORM */
+.form-body { flex: 1; padding: 8px 20px 32px; overflow-y: auto; }
+.form-section { margin-bottom: 28px; }
+.form-section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
 
-  .delete-btn {
-    width: 100%;
-    background: transparent;
-    color: rgba(255,255,255,0.4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-size: 14px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: color 0.15s;
-  }
-  .delete-btn:active { color: #ff5555; }
+.field {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; transition: border-color 0.15s;
+}
+.field:focus-within { border-color: rgba(255,255,255,0.2); }
+.field-label { font-size: 10px; font-weight: 600; color: var(--text-muted); padding: 12px 16px 0; letter-spacing: 0.06em; text-transform: uppercase; }
+.field input, .field textarea {
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 15px; font-family: inherit; padding: 6px 16px 12px;
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text-muted); }
+.field textarea { resize: none; min-height: 88px; }
+.field select {
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 15px; font-family: inherit; padding: 6px 16px 12px;
+  appearance: none; cursor: pointer;
+}
+.field select option { background: #191818; }
 
-  /* ── DETAIL ── */
-  .detail-hero {
-    padding: 24px 20px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    text-align: center;
-  }
-  .detail-avatar {
-    width: 84px; height: 84px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px;
-    font-weight: 700;
-    border: 1px solid var(--border);
-  }
-  .detail-name { font-size: 26px; line-height: 1.1; }
-  .detail-date { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+/* NOTIFY */
+.notify-options { display: flex; flex-direction: column; gap: 8px; }
+.notify-option {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.notify-option.selected { border-color: rgba(255,255,255,0.25); }
+.notify-option-left { display: flex; align-items: center; gap: 12px; }
+.notify-option-icon { font-size: 20px; }
+.notify-option-text { font-size: 14px; font-weight: 500; }
+.notify-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.notify-check {
+  width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.notify-option.selected .notify-check { background: #fff; border-color: #fff; }
+.notify-option.selected .notify-check svg { stroke: #0A0A0A; }
+.notify-check svg { stroke: transparent; }
 
-  .detail-countdown {
-    margin: 0 20px 16px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px 20px;
-    text-align: center;
-  }
-  .countdown-number {
-    font-size: 64px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -3px;
-    font-family: 'Migra', 'Georgia', serif;
-  }
-  .countdown-label { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
-  .countdown-age { font-size: 13px; color: rgba(255,255,255,0.3); margin-top: 6px; }
+/* FOLDER PICKER */
+.folder-picker { display: flex; flex-direction: column; gap: 8px; }
+.folder-pick-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 13px 16px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.folder-pick-item.selected { border-color: rgba(255,255,255,0.25); }
+.folder-pick-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.folder-pick-name { font-size: 14px; font-weight: 500; flex: 1; }
+.folder-pick-check {
+  width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.folder-pick-item.selected .folder-pick-check { background: #fff; border-color: #fff; }
+.folder-pick-item.selected .folder-pick-check svg { stroke: #0A0A0A; }
+.folder-pick-check svg { stroke: transparent; }
 
-  .detail-cards { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
-  .info-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-  }
-  .info-card-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .info-card-value { font-size: 15px; line-height: 1.5; }
-  .info-card-empty { font-size: 14px; color: var(--text-muted); }
+/* BUTTONS */
+.save-btn {
+  width: 100%; background: #FFFFFF; color: #0A0A0A; border: none;
+  border-radius: var(--radius-sm); padding: 16px; font-size: 15px; font-weight: 600;
+  font-family: inherit; cursor: pointer; margin-top: 8px; transition: opacity 0.15s;
+}
+.save-btn:active { opacity: 0.8; }
+.delete-btn {
+  width: 100%; background: transparent; color: rgba(255,255,255,0.4);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px;
+  font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
+  margin-top: 8px; transition: color 0.15s;
+}
+.delete-btn:active { color: #ff5555; }
 
-  .detail-edit-btn {
-    margin: 16px 20px 0;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-muted);
-    font-family: inherit;
-    cursor: pointer;
-    width: calc(100% - 40px);
-    transition: color 0.15s;
-  }
-  .detail-edit-btn:active { color: var(--text); }
+/* DETAIL */
+.detail-hero { padding: 24px 20px 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+.detail-avatar {
+  width: 84px; height: 84px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 700; border: 1px solid var(--border);
+  animation: pop 0.3s ease;
+}
+.detail-name { font-size: 26px; line-height: 1.1; }
+.detail-date { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+.detail-folder-tag { margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 4px 10px; }
 
-  /* ── FOOTER ── */
-  .footer {
-    text-align: center;
-    padding: 24px 20px 28px;
-    margin-top: auto;
-  }
-  .footer a {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-decoration: none;
-    letter-spacing: 0.02em;
-    transition: color 0.15s;
-  }
-  .footer a:hover { color: rgba(255,255,255,0.65); }
+.detail-countdown {
+  margin: 0 20px 16px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px 20px; text-align: center;
+  animation: slideUp 0.3s ease;
+}
+.countdown-number { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -3px; font-family: 'Migra', 'Georgia', serif; }
+.countdown-label { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+.countdown-age { font-size: 13px; color: rgba(255,255,255,0.3); margin-top: 6px; }
+
+.detail-cards { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.info-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; animation: slideUp 0.35s ease; }
+.info-card-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.info-card-value { font-size: 15px; line-height: 1.5; }
+.info-card-empty { font-size: 14px; color: var(--text-muted); }
+
+.detail-edit-btn {
+  margin: 16px 20px 0; background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px; font-size: 14px; font-weight: 500;
+  color: var(--text-muted); font-family: inherit; cursor: pointer;
+  width: calc(100% - 40px); transition: color 0.15s;
+}
+.detail-edit-btn:active { color: var(--text); }
+
+/* FOLDER MANAGE SCREEN */
+.folder-list { flex: 1; padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.folder-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+  animation: pop 0.22s ease;
+}
+.folder-item-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.folder-item-name { font-size: 16px; font-weight: 600; flex: 1; }
+.folder-item-count { font-size: 13px; color: var(--text-muted); }
+.folder-item-del { cursor: pointer; opacity: 0.4; transition: opacity 0.15s; padding: 4px; }
+.folder-item-del:active { opacity: 1; }
+
+/* FOOTER */
+.footer { text-align: center; padding: 24px 20px 28px; margin-top: auto; }
+.footer a {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-muted); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 100px; padding: 9px 16px;
+  transition: all 0.15s; font-family: inherit;
+}
+.footer a:active { color: var(--text); border-color: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
@@ -519,7 +337,7 @@
     <div class="list-subtitle" id="list-subtitle">Загрузка...</div>
   </div>
 
-  <div id="next-banner" class="next-banner hidden">
+  <div id="next-banner" class="next-banner hidden" onclick="bannerClick()">
     <div class="next-banner-emoji" id="banner-emoji">🎉</div>
     <div class="next-banner-info">
       <div class="next-banner-name" id="banner-name"></div>
@@ -541,895 +359,7 @@
     <button class="tab" onclick="setTab('month',this)">Этот месяц</button>
   </div>
 
-  <div id="people-list" class="people-list"></div>
-  <div class="list-bottom-pad"></div>
-
-  <div class="fab" onclick="openAdd()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  </div>
-</div>
-
-<!-- ═══ FORM ═══ -->
-<div class="screen" id="screen-form">
-  <div class="header">
-    <div class="header-back" onclick="goBack()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </div>
-    <div class="header-title" id="form-title">Добавить</div>
-  </div>
-
-  <div class="form-body">
-    <div class="form-section">
-      <div class="form-section-label">Основное</div>
-      <div class="field">
-        <div class="field-label">Имя и Фамилия</div>
-        <input type="text" id="f-name" placeholder="Алексей Учитель">
-      </div>
-      <div class="field">
-        <div class="field-label">Дата рождения</div>
-        <input type="date" id="f-date">
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-label">Подарок 🎁</div>
-      <div class="field">
-        <div class="field-label">Что подарить</div>
-        <textarea id="f-gift" placeholder="Запиши идею на будущее..."></textarea>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-label">Уведомления 🔔</div>
-      <div class="notify-options" id="notify-options">
-        <div class="notify-option selected" data-days="1" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">🌅</div>
-            <div>
-              <div class="notify-option-text">В день рождения</div>
-              <div class="notify-option-sub">Утром в сам день</div>
-            </div>
-          </div>
-          <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        </div>
-        <div class="notify-option" data-days="3" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">📅</div>
-            <div>
-              <div class="notify-option-text">За 3 дня</div>
-              <div class="notify-option-sub">Чтобы успеть подготовиться</div>
-            </div>
-          </div>
-          <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        </div>
-        <div class="notify-option" data-days="7" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">📆</div>
-            <div>
-              <div class="notify-option-text">За неделю</div>
-              <div class="notify-option-sub">Время купить подарок</div>
-            </div>
-          </div>
-          <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        </div>
-        <div class="notify-option" data-days="14" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">🗓️</div>
-            <div>
-              <div class="notify-option-text">За 2 недели</div>
-              <div class="notify-option-sub">Максимум времени</div>
-            </div>
-          </div>
-          <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        </div>
-        <div class="notify-option" data-days="30" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">🎯</div>
-            <div>
-              <div class="notify-option-text">За месяц</div>
-              <div class="notify-option-sub">Планировщик</div>
-            </div>
-          </div>
-          <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        </div>
-      </div>
-    </div>
-
-    <button class="save-btn" onclick="savePerson()">Сохранить</button>
-    <button class="delete-btn hidden" id="delete-btn" onclick="deletePerson()">Удалить</button>
-  </div>
-</div>
-
-<!-- ═══ DETAIL ═══ -->
-<div class="screen" id="screen-detail">
-  <div class="header">
-    <div class="header-back" onclick="goBack()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </div>
-    <div class="header-title">Профиль</div>
-    <div class="header-action" onclick="openEdit()">Изменить</div>
-  </div>
-
-  <div class="detail-hero">
-    <div class="detail-avatar" id="d-avatar"></div>
-    <div>
-      <div class="detail-name title-serif" id="d-name"></div>
-      <div class="detail-date" id="d-date"></div>
-    </div>
-  </div>
-
-  <div class="detail-countdown">
-    <div class="countdown-number" id="d-days"></div>
-    <div class="countdown-label" id="d-label"></div>
-    <div class="countdown-age" id="d-age"></div>
-  </div>
-
-  <div class="detail-cards">
-    <div class="info-card">
-      <div class="info-card-label">🎁 Что подарить</div>
-      <div id="d-gift-value"></div>
-    </div>
-    <div class="info-card">
-      <div class="info-card-label">🔔 Уведомления</div>
-      <div class="info-card-value" id="d-notify-value"></div>
-    </div>
-  </div>
-
-  <button class="detail-edit-btn" onclick="openEdit()">Редактировать →</button>
-
-  <div class="footer">
-    <a href="https://t.me/timolifedesign" target="_blank">Сделано Даниилом Тимофеевым</a>
-  </div>
-</div>
-
-<script>
-// ── DATA ──────────────────────────────────────────
-let people = JSON.parse(localStorage.getItem('bd_people') || '[]');
-let editingId = null;
-let currentTab = 'all';
-let viewingId = null;
-
-function save() { localStorage.setItem('bd_people', JSON.stringify(people)); }
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-
-// ── DATE UTILS ────────────────────────────────────
-function daysUntilBirthday(dateStr) {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const parts = dateStr.split('-').map(Number);
-  const m = parts[1], d = parts[2];
-  let next = new Date(today.getFullYear(), m-1, d);
-  if (next < today) next.setFullYear(today.getFullYear()+1);
-  return Math.round((next - today) / 86400000);
-}
-
-function formatDate(dateStr) {
-  const parts = dateStr.split('-').map(Number);
-  const y = parts[0], m = parts[1], d = parts[2];
-  const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  return y > 1 ? `${d} ${months[m-1]} ${y} г.р.` : `${d} ${months[m-1]}`;
-}
-
-function ageOnNextBirthday(dateStr) {
-  const parts = dateStr.split('-').map(Number);
-  const y = parts[0], m = parts[1], d = parts[2];
-  if (!y || y < 2) return null;
-  const today = new Date();
-  let nextYear = today.getFullYear();
-  const next = new Date(nextYear, m-1, d);
-  if (next <= today) nextYear++;
-  return nextYear - y;
-}
-
-function dayWord(n) {
-  if (n===1) return 'день';
-  if (n>=2&&n<=4) return 'дня';
-  return 'дней';
-}
-
-function urgencyEmoji(days) {
-  if (days===0) return '🎂';
-  if (days<=3) return '🎉';
-  if (days<=7) return '🎈';
-  if (days<=14) return '⏳';
-  return '📅';
-}
-
-function notifyLabel(days) {
-  const map = {1:'в день',3:'за 3 дня',7:'за неделю',14:'за 2 недели',30:'за месяц'};
-  return map[days] || `за ${days} дней`;
-}
-
-function avatarBg(name) {
-  const palette = ['#2a2a3a','#2a3a2a','#3a2a2a','#2a3a3a','#3a2a3a','#3a3a2a'];
-  return palette[name.charCodeAt(0) % palette.length];
-}
-
-function initials(name) {
-  return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-}
-
-// ── SCREENS ───────────────────────────────────────
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-'+id).classList.add('active');
-  window.scrollTo(0,0);
-}
-function goBack() {
-  showScreen('list');
-  editingId = null; viewingId = null;
-  renderList();
-}
-
-// ── TABS ──────────────────────────────────────────
-function setTab(tab, el) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  renderList();
-}
-
-// ── LIST ──────────────────────────────────────────
-function renderList() {
-  const q = document.getElementById('search-input').value.toLowerCase();
-  let filtered = people.map(p => ({...p, days: daysUntilBirthday(p.date)}));
-  if (q) filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
-  if (currentTab === 'soon') filtered = filtered.filter(p => p.days <= 30);
-  if (currentTab === 'month') {
-    const m = new Date().getMonth()+1;
-    filtered = filtered.filter(p => Number(p.date.split('-')[1]) === m);
-  }
-  filtered.sort((a,b) => a.days - b.days);
-
-  document.getElementById('list-subtitle').textContent =
-    people.length === 0 ? 'Добавь первого человека' :
-    `${people.length} ${people.length===1?'человек':'человека'} в списке`;
-
-  const banner = document.getElementById('next-banner');
-  if (people.length > 0 && !q && currentTab==='all') {
-    const next = [...people].map(p=>({...p,days:daysUntilBirthday(p.date)})).sort((a,b)=>a.days-b.days)[0];
-    banner.classList.remove('hidden');
-    document.getElementById('banner-emoji').textContent = urgencyEmoji(next.days);
-    document.getElementById('banner-name').textContent = next.name;
-    document.getElementById('banner-days').textContent = next.days===0 ? 'Сегодня!' : `Через ${next.days} ${dayWord(next.days)}`;
-  } else { banner.classList.add('hidden'); }
-
-  const container = document.getElementById('people-list');
-  container.innerHTML = '';
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div class="empty-state">
-      <div class="empty-emoji">${q?'🔍':currentTab==='soon'?'✅':'🎂'}</div>
-      <div class="empty-title">${q?'Никого не нашли':currentTab==='soon'?'Скоро никого':'Список пуст'}</div>
-      <div class="empty-sub">${q?'Попробуй другой запрос':'Нажми + чтобы добавить\nпервого человека'}</div>
-    </div>`;
-    return;
-  }
-
-  const todayP = filtered.filter(p=>p.days===0);
-  const soonP = filtered.filter(p=>p.days>0&&p.days<=7);
-  const restP = filtered.filter(p=>p.days>7);
-
-  function renderCard(p) {
-    const days = p.days;
-    const badgeClass = days===0?'badge-today-color':days<=7?'badge-soon-color':'badge-normal-color';
-    const daysText = days===0?'🎂':days;
-    const daysLabel = days===0?'Сегодня':dayWord(days);
-    const bg = avatarBg(p.name);
-    const div = document.createElement('div');
-    div.className = 'person-card';
-    div.onclick = () => openDetail(p.id);
-    div.innerHTML = `
-      <div class="person-avatar" style="background:${bg}">${initials(p.name)}</div>
-      <div class="person-info">
-        <div class="person-name">${p.name}</div>
-        <div class="person-date">${formatDate(p.date)}</div>
-      </div>
-      <div class="person-right">
-        <div class="badge-wrap">
-          <div class="badge-days ${badgeClass}">${daysText}</div>
-          <div class="badge-label">${daysLabel}</div>
-        </div>
-        <div class="arrow-btn">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-      </div>`;
-    container.appendChild(div);
-  }
-
-  if (todayP.length && currentTab==='all' && !q) {
-    const l=document.createElement('div'); l.className='section-label'; l.textContent='🎂 Сегодня'; container.appendChild(l);
-    todayP.forEach(renderCard);
-  }
-  if (soonP.length && currentTab==='all' && !q) {
-    const l=document.createElement('div'); l.className='section-label'; l.textContent='На этой неделе'; container.appendChild(l);
-    soonP.forEach(renderCard);
-  }
-  if (restP.length && currentTab==='all' && !q) {
-    if (todayP.length||soonP.length) {
-      const l=document.createElement('div'); l.className='section-label'; l.textContent='Все остальные'; container.appendChild(l);
-    }
-    restP.forEach(renderCard);
-  }
-  if (q || currentTab!=='all') filtered.forEach(renderCard);
-}
-
-// ── FORM ──────────────────────────────────────────
-function openAdd() {
-  editingId = null;
-  document.getElementById('form-title').textContent = 'Добавить';
-  document.getElementById('f-name').value = '';
-  document.getElementById('f-date').value = '';
-  document.getElementById('f-gift').value = '';
-  document.getElementById('delete-btn').classList.add('hidden');
-  document.querySelectorAll('.notify-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.days==='1');
-  });
-  showScreen('form');
-  setTimeout(() => document.getElementById('f-name').focus(), 300);
-}
-
-function openEdit() {
-  const p = people.find(x=>x.id===viewingId);
-  if (!p) return;
-  editingId = p.id;
-  document.getElementById('form-title').textContent = 'Изменить';
-  document.getElementById('f-name').value = p.name;
-  document.getElementById('f-date').value = p.date;
-  document.getElementById('f-gift').value = p.gift||'';
-  document.getElementById('delete-btn').classList.remove('hidden');
-  const sel = p.notify||[1];
-  document.querySelectorAll('.notify-option').forEach(el => {
-    el.classList.toggle('selected', sel.includes(Number(el.dataset.days)));
-  });
-  showScreen('form');
-}
-
-function toggleNotify(el) { el.classList.toggle('selected'); }
-
-function savePerson() {
-  const name = document.getElementById('f-name').value.trim();
-  const date = document.getElementById('f-date').value;
-  if (!name || !date) { alert('Введи имя и дату рождения'); return; }
-  const gift = document.getElementById('f-gift').value.trim();
-  const notify = [...document.querySelectorAll('.notify-option.selected')].map(el=>Number(el.dataset.days));
-  if (notify.length===0) notify.push(1);
-
-  if (editingId) {
-    const idx = people.findIndex(p=>p.id===editingId);
-    people[idx] = {id:editingId, name, date, gift, notify};
-  } else {
-    people.push({id:genId(), name, date, gift, notify});
-  }
-  save();
-  try { if(window.Telegram?.WebApp) window.Telegram.WebApp.sendData(JSON.stringify({action:editingId?'update':'add',name,date,notify})); } catch(e){}
-  showScreen('list');
-  editingId = null;
-  renderList();
-}
-
-function deletePerson() {
-  if (!confirm(`Удалить ${people.find(p=>p.id===editingId)?.name}?`)) return;
-  people = people.filter(p=>p.id!==editingId);
-  save();
-  editingId=null; viewingId=null;
-  showScreen('list'); renderList();
-}
-
-// ── DETAIL ────────────────────────────────────────
-function openDetail(id) {
-  const p = people.find(x=>x.id===id);
-  if (!p) return;
-  viewingId = id;
-
-  const el = document.getElementById('d-avatar');
-  el.textContent = initials(p.name);
-  el.style.background = avatarBg(p.name);
-
-  document.getElementById('d-name').textContent = p.name;
-  document.getElementById('d-date').textContent = formatDate(p.date);
-
-  const days = daysUntilBirthday(p.date);
-  const dEl = document.getElementById('d-days');
-  const lEl = document.getElementById('d-label');
-  const aEl = document.getElementById('d-age');
-
-  if (days===0) {
-    dEl.textContent='🎂'; lEl.textContent='Сегодня день рождения!'; lEl.style.color='#fff';
-  } else {
-    dEl.textContent=days; dEl.style.color='#fff';
-    lEl.textContent=`${dayWord(days)} до дня рождения`; lEl.style.color='';
-  }
-  const age = ageOnNextBirthday(p.date);
-  aEl.textContent = age ? `Исполнится ${age} лет` : '';
-
-  const giftEl = document.getElementById('d-gift-value');
-  if (p.gift) { giftEl.className='info-card-value'; giftEl.textContent=p.gift; }
-  else { giftEl.className='info-card-empty'; giftEl.textContent='Идей пока нет — добавь!'; }
-
-  document.getElementById('d-notify-value').textContent = (p.notify||[1]).map(notifyLabel).join(', ');
-  showScreen('detail');
-}
-
-// ── TELEGRAM INIT ─────────────────────────────────
-try {
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.ready(); tg.expand(); tg.enableClosingConfirmation(); }
-} catch(e) {}
-
-renderList();
-</script>
-</body>
-</html>
-  .header-back svg { stroke: var(--arrow); }
-  .header-title {
-    font-size: 16px;
-    font-weight: 500;
-    flex: 1;
-    color: var(--text-muted);
-  }
-  .header-action {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 6px 0;
-    transition: color 0.15s;
-  }
-  .header-action:active { color: var(--text); }
-
-  /* ── LIST TOP ── */
-  .list-top { padding: 28px 20px 20px; }
-  .list-eyebrow {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-  .list-title {
-    font-size: 36px;
-    line-height: 1.05;
-  }
-  .list-subtitle {
-    margin-top: 6px;
-    font-size: 14px;
-    color: var(--text-muted);
-  }
-
-  /* ── NEXT BANNER ── */
-  .next-banner {
-    margin: 0 20px 20px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .next-banner-emoji { font-size: 30px; flex-shrink: 0; }
-  .next-banner-info { flex: 1; min-width: 0; }
-  .next-banner-name {
-    font-size: 16px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .next-banner-days {
-    margin-top: 3px;
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-  .next-banner-arrow {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: var(--circle);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-
-  /* ── SEARCH ── */
-  .search-wrap {
-    position: relative;
-    padding: 0 20px 16px;
-  }
-  .search-icon {
-    position: absolute;
-    left: 34px; top: 50%;
-    transform: translateY(-60%);
-    opacity: 0.3;
-    pointer-events: none;
-  }
-  .search-input {
-    width: 100%;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px 12px 38px;
-    color: var(--text);
-    font-size: 15px;
-    outline: none;
-    font-family: inherit;
-  }
-  .search-input::placeholder { color: var(--text-muted); }
-
-  /* ── TABS ── */
-  .tabs {
-    display: flex;
-    gap: 8px;
-    padding: 0 20px 18px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex-shrink: 0;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    padding: 7px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    font-family: inherit;
-  }
-  .tab.active {
-    background: var(--text);
-    border-color: var(--text);
-    color: #0A0A0A;
-  }
-
-  /* ── SECTION LABEL ── */
-  .section-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0 20px;
-    margin: 14px 0 10px;
-  }
-
-  /* ── PEOPLE LIST ── */
-  .people-list {
-    flex: 1;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .person-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: opacity 0.12s;
-    position: relative;
-    overflow: hidden;
-  }
-  .person-card:active { opacity: 0.7; }
-
-  .person-avatar {
-    width: 46px; height: 46px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    font-weight: 600;
-    flex-shrink: 0;
-    border: 1px solid var(--border);
-  }
-  .person-info { flex: 1; min-width: 0; }
-  .person-name {
-    font-size: 16px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .person-date {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .person-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  .badge-wrap { text-align: right; }
-  .badge-days {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
-    font-family: 'Migra', 'Georgia', serif;
-  }
-  .badge-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .badge-today-color { color: #fff; }
-  .badge-soon-color { color: rgba(255,255,255,0.8); }
-  .badge-normal-color { color: rgba(255,255,255,0.5); }
-
-  .arrow-btn {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: var(--circle);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-
-  /* ── FAB ── */
-  .fab {
-    position: fixed;
-    right: 20px; bottom: calc(28px + env(safe-area-inset-bottom, 0px));
-    width: 56px; height: 56px;
-    background: #FFFFFF;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
-    transition: transform 0.15s;
-    z-index: 100;
-  }
-  .fab:active { transform: scale(0.92); }
-  .fab svg { stroke: #0A0A0A; }
-
-  .list-bottom-pad { height: 100px; }
-
-  /* ── EMPTY STATE ── */
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 40px 30px;
-    text-align: center;
-  }
-  .empty-emoji { font-size: 48px; margin-bottom: 4px; }
-  .empty-title { font-size: 20px; font-weight: 600; }
-  .empty-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-
-  /* ── FORM ── */
-  .form-body { flex: 1; padding: 8px 20px 32px; overflow-y: auto; }
-
-  .form-section { margin-bottom: 28px; }
-  .form-section-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 12px;
-  }
-
-  .field {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    margin-bottom: 8px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .field:focus-within { border-color: rgba(255,255,255,0.2); }
-  .field-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-muted);
-    padding: 12px 16px 0;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .field input, .field textarea {
-    width: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-size: 15px;
-    font-family: inherit;
-    padding: 6px 16px 12px;
-  }
-  .field input::placeholder, .field textarea::placeholder { color: var(--text-muted); }
-  .field textarea { resize: none; min-height: 88px; }
-
-  /* ── NOTIFY OPTIONS ── */
-  .notify-options { display: flex; flex-direction: column; gap: 8px; }
-  .notify-option {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .notify-option.selected { border-color: rgba(255,255,255,0.25); }
-  .notify-option-left { display: flex; align-items: center; gap: 12px; }
-  .notify-option-icon { font-size: 20px; }
-  .notify-option-text { font-size: 14px; font-weight: 500; }
-  .notify-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .notify-check {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
-  .notify-option.selected .notify-check {
-    background: #fff;
-    border-color: #fff;
-  }
-  .notify-option.selected .notify-check svg { stroke: #0A0A0A; }
-  .notify-check svg { stroke: transparent; }
-
-  /* ── BUTTONS ── */
-  .save-btn {
-    width: 100%;
-    background: #FFFFFF;
-    color: #0A0A0A;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 16px;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: opacity 0.15s;
-    letter-spacing: 0.01em;
-  }
-  .save-btn:active { opacity: 0.8; }
-
-  .delete-btn {
-    width: 100%;
-    background: transparent;
-    color: rgba(255,255,255,0.4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-size: 14px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: color 0.15s;
-  }
-  .delete-btn:active { color: #ff5555; }
-
-  /* ── DETAIL ── */
-  .detail-hero {
-    padding: 24px 20px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    text-align: center;
-  }
-  .detail-avatar {
-    width: 84px; height: 84px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px;
-    font-weight: 700;
-    border: 1px solid var(--border);
-  }
-  .detail-name { font-size: 26px; line-height: 1.1; }
-  .detail-date { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
-
-  .detail-countdown {
-    margin: 0 20px 16px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px 20px;
-    text-align: center;
-  }
-  .countdown-number {
-    font-size: 64px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -3px;
-    font-family: 'Migra', 'Georgia', serif;
-  }
-  .countdown-label { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
-  .countdown-age { font-size: 13px; color: rgba(255,255,255,0.3); margin-top: 6px; }
-
-  .detail-cards { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
-  .info-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-  }
-  .info-card-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .info-card-value { font-size: 15px; line-height: 1.5; }
-  .info-card-empty { font-size: 14px; color: var(--text-muted); }
-
-  .detail-edit-btn {
-    margin: 16px 20px 0;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-muted);
-    font-family: inherit;
-    cursor: pointer;
-    width: calc(100% - 40px);
-    transition: color 0.15s;
-  }
-  .detail-edit-btn:active { color: var(--text); }
-
-  /* ── FOOTER ── */
-  .footer {
-    text-align: center;
-    padding: 24px 20px 28px;
-    margin-top: auto;
-  }
-  .footer a {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-decoration: none;
-    letter-spacing: 0.02em;
-    transition: color 0.15s;
-  }
-  .footer a:hover { color: rgba(255,255,255,0.65); }
-</style>
-</head>
-<body>
-
-<!-- ═══ LIST ═══ -->
-<div class="screen active" id="screen-list">
-  <div class="list-top">
-    <div class="list-eyebrow">Напоминания</div>
-    <div class="list-title title-serif">Дни рождения</div>
-    <div class="list-subtitle" id="list-subtitle">Загрузка...</div>
-  </div>
-
-  <div id="next-banner" class="next-banner hidden">
-    <div class="next-banner-emoji" id="banner-emoji">🎉</div>
-    <div class="next-banner-info">
-      <div class="next-banner-name" id="banner-name"></div>
-      <div class="next-banner-days" id="banner-days"></div>
-    </div>
-    <div class="next-banner-arrow">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </div>
-  </div>
-
-  <div class="search-wrap">
-    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input class="search-input" id="search-input" type="text" placeholder="Поиск..." oninput="renderList()">
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" onclick="setTab('all',this)">Все</button>
-    <button class="tab" onclick="setTab('soon',this)">Скоро</button>
-    <button class="tab" onclick="setTab('month',this)">Этот месяц</button>
-  </div>
+  <div class="folders-wrap" id="folders-wrap"></div>
 
   <div id="people-list" class="people-list"></div>
   <div class="list-bottom-pad"></div>
@@ -1449,7 +379,6 @@ renderList();
     </div>
     <div class="header-title" id="form-title">Добавить</div>
   </div>
-
   <div class="form-body">
     <div class="form-section">
       <div class="form-section-label">Основное</div>
@@ -1464,6 +393,11 @@ renderList();
     </div>
 
     <div class="form-section">
+      <div class="form-section-label">Папка</div>
+      <div class="folder-picker" id="folder-picker"></div>
+    </div>
+
+    <div class="form-section">
       <div class="form-section-label">Подарок 🎁</div>
       <div class="field">
         <div class="field-label">Что подарить</div>
@@ -1473,55 +407,25 @@ renderList();
 
     <div class="form-section">
       <div class="form-section-label">Уведомления 🔔</div>
-      <div class="notify-options" id="notify-options">
+      <div class="notify-options">
         <div class="notify-option selected" data-days="1" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">🌅</div>
-            <div>
-              <div class="notify-option-text">В день рождения</div>
-              <div class="notify-option-sub">Утром в сам день</div>
-            </div>
-          </div>
+          <div class="notify-option-left"><div class="notify-option-icon">🌅</div><div><div class="notify-option-text">В день рождения</div><div class="notify-option-sub">Утром в сам день</div></div></div>
           <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="notify-option" data-days="3" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">📅</div>
-            <div>
-              <div class="notify-option-text">За 3 дня</div>
-              <div class="notify-option-sub">Чтобы успеть подготовиться</div>
-            </div>
-          </div>
+          <div class="notify-option-left"><div class="notify-option-icon">📅</div><div><div class="notify-option-text">За 3 дня</div><div class="notify-option-sub">Чтобы успеть подготовиться</div></div></div>
           <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="notify-option" data-days="7" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">📆</div>
-            <div>
-              <div class="notify-option-text">За неделю</div>
-              <div class="notify-option-sub">Время купить подарок</div>
-            </div>
-          </div>
+          <div class="notify-option-left"><div class="notify-option-icon">📆</div><div><div class="notify-option-text">За неделю</div><div class="notify-option-sub">Время купить подарок</div></div></div>
           <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="notify-option" data-days="14" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">🗓️</div>
-            <div>
-              <div class="notify-option-text">За 2 недели</div>
-              <div class="notify-option-sub">Максимум времени</div>
-            </div>
-          </div>
+          <div class="notify-option-left"><div class="notify-option-icon">🗓️</div><div><div class="notify-option-text">За 2 недели</div><div class="notify-option-sub">Максимум времени</div></div></div>
           <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="notify-option" data-days="30" onclick="toggleNotify(this)">
-          <div class="notify-option-left">
-            <div class="notify-option-icon">🎯</div>
-            <div>
-              <div class="notify-option-text">За месяц</div>
-              <div class="notify-option-sub">Планировщик</div>
-            </div>
-          </div>
+          <div class="notify-option-left"><div class="notify-option-icon">🎯</div><div><div class="notify-option-text">За месяц</div><div class="notify-option-sub">Планировщик</div></div></div>
           <div class="notify-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
       </div>
@@ -1541,21 +445,19 @@ renderList();
     <div class="header-title">Профиль</div>
     <div class="header-action" onclick="openEdit()">Изменить</div>
   </div>
-
   <div class="detail-hero">
     <div class="detail-avatar" id="d-avatar"></div>
     <div>
       <div class="detail-name title-serif" id="d-name"></div>
       <div class="detail-date" id="d-date"></div>
+      <div id="d-folder-tag" class="detail-folder-tag hidden"></div>
     </div>
   </div>
-
   <div class="detail-countdown">
     <div class="countdown-number" id="d-days"></div>
     <div class="countdown-label" id="d-label"></div>
     <div class="countdown-age" id="d-age"></div>
   </div>
-
   <div class="detail-cards">
     <div class="info-card">
       <div class="info-card-label">🎁 Что подарить</div>
@@ -1566,160 +468,242 @@ renderList();
       <div class="info-card-value" id="d-notify-value"></div>
     </div>
   </div>
-
   <button class="detail-edit-btn" onclick="openEdit()">Редактировать →</button>
-
   <div class="footer">
-    <a href="https://t.me/timolifedesign" target="_blank">Сделано Даниилом Тимофеевым</a>
+    <a href="https://t.me/timolifedesign" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.17 14.073l-2.95-.924c-.64-.203-.654-.64.136-.949l11.57-4.461c.537-.194 1.006.131.836.509z"/></svg>
+      Канал создателя
+    </a>
   </div>
+  <div style="height:24px"></div>
+</div>
+
+<!-- ═══ FOLDERS SCREEN ═══ -->
+<div class="screen" id="screen-folders">
+  <div class="header">
+    <div class="header-back" onclick="goBack()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </div>
+    <div class="header-title">Папки</div>
+  </div>
+  <div class="folder-list" id="folder-list"></div>
+  <div style="padding:20px">
+    <div class="field">
+      <div class="field-label">Новая папка</div>
+      <input type="text" id="new-folder-name" placeholder="Работа, Семья, Школа...">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:4px" id="color-picker"></div>
+    <button class="save-btn" onclick="addFolder()" style="margin-top:12px">Создать папку</button>
+  </div>
+  <div style="height:24px"></div>
 </div>
 
 <script>
 // ── DATA ──────────────────────────────────────────
 let people = JSON.parse(localStorage.getItem('bd_people') || '[]');
-let editingId = null;
-let currentTab = 'all';
-let viewingId = null;
+let folders = JSON.parse(localStorage.getItem('bd_folders') || '[]');
+let editingId = null, viewingId = null, currentTab = 'all', currentFolder = null;
+let selectedFolderColor = '#6366f1';
+let newPersonFolder = null;
 
-function save() { localStorage.setItem('bd_people', JSON.stringify(people)); }
+const COLORS = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4'];
+
+function save() {
+  localStorage.setItem('bd_people', JSON.stringify(people));
+  localStorage.setItem('bd_folders', JSON.stringify(folders));
+}
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
 // ── DATE UTILS ────────────────────────────────────
-function daysUntilBirthday(dateStr) {
+function daysUntil(dateStr) {
   const today = new Date(); today.setHours(0,0,0,0);
-  const parts = dateStr.split('-').map(Number);
-  const m = parts[1], d = parts[2];
-  let next = new Date(today.getFullYear(), m-1, d);
+  const p = dateStr.split('-').map(Number);
+  let next = new Date(today.getFullYear(), p[1]-1, p[2]);
   if (next < today) next.setFullYear(today.getFullYear()+1);
   return Math.round((next - today) / 86400000);
 }
-
 function formatDate(dateStr) {
-  const parts = dateStr.split('-').map(Number);
-  const y = parts[0], m = parts[1], d = parts[2];
+  const p = dateStr.split('-').map(Number);
+  const y = p[0], m = p[1], d = p[2];
   const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
   return y > 1 ? `${d} ${months[m-1]} ${y} г.р.` : `${d} ${months[m-1]}`;
 }
-
-function ageOnNextBirthday(dateStr) {
-  const parts = dateStr.split('-').map(Number);
-  const y = parts[0], m = parts[1], d = parts[2];
-  if (!y || y < 2) return null;
+function ageNext(dateStr) {
+  const p = dateStr.split('-').map(Number);
+  if (!p[0] || p[0] < 2) return null;
   const today = new Date();
-  let nextYear = today.getFullYear();
-  const next = new Date(nextYear, m-1, d);
-  if (next <= today) nextYear++;
-  return nextYear - y;
+  let ny = today.getFullYear();
+  if (new Date(ny, p[1]-1, p[2]) <= today) ny++;
+  return ny - p[0];
 }
-
-function dayWord(n) {
-  if (n===1) return 'день';
-  if (n>=2&&n<=4) return 'дня';
-  return 'дней';
-}
-
-function urgencyEmoji(days) {
-  if (days===0) return '🎂';
-  if (days<=3) return '🎉';
-  if (days<=7) return '🎈';
-  if (days<=14) return '⏳';
-  return '📅';
-}
-
-function notifyLabel(days) {
-  const map = {1:'в день',3:'за 3 дня',7:'за неделю',14:'за 2 недели',30:'за месяц'};
-  return map[days] || `за ${days} дней`;
-}
-
+function dayWord(n) { return n===1?'день':n>=2&&n<=4?'дня':'дней'; }
+function urgencyEmoji(d) { return d===0?'🎂':d<=3?'🎉':d<=7?'🎈':d<=14?'⏳':'📅'; }
+function notifyLabel(d) { return {1:'в день',3:'за 3 дня',7:'за неделю',14:'за 2 недели',30:'за месяц'}[d]||`за ${d} д.`; }
 function avatarBg(name) {
-  const palette = ['#2a2a3a','#2a3a2a','#3a2a2a','#2a3a3a','#3a2a3a','#3a3a2a'];
-  return palette[name.charCodeAt(0) % palette.length];
+  const p=['#2a2a3a','#2a3a2a','#3a2a2a','#2a3a3a','#3a2a3a','#3a3a2a'];
+  return p[name.charCodeAt(0)%p.length];
 }
-
-function initials(name) {
-  return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-}
+function initials(name) { return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
 
 // ── SCREENS ───────────────────────────────────────
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   window.scrollTo(0,0);
 }
-function goBack() {
-  showScreen('list');
-  editingId = null; viewingId = null;
-  renderList();
-}
+function goBack() { showScreen('list'); editingId=null; viewingId=null; renderList(); }
 
 // ── TABS ──────────────────────────────────────────
 function setTab(tab, el) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderList();
 }
 
+// ── FOLDERS UI ────────────────────────────────────
+function renderFolderChips() {
+  const wrap = document.getElementById('folders-wrap');
+  if (folders.length === 0) { wrap.innerHTML=''; return; }
+  wrap.innerHTML = '';
+
+  const allChip = document.createElement('div');
+  allChip.className = 'folder-chip' + (currentFolder===null?' active':'');
+  allChip.textContent = 'Все папки';
+  allChip.onclick = () => { currentFolder=null; renderFolderChips(); renderList(); };
+  wrap.appendChild(allChip);
+
+  folders.forEach(f => {
+    const chip = document.createElement('div');
+    chip.className = 'folder-chip' + (currentFolder===f.id?' active':'');
+    chip.innerHTML = `<div class="folder-chip-dot" style="background:${f.color}"></div>${f.name}`;
+    chip.onclick = () => { currentFolder=f.id; renderFolderChips(); renderList(); };
+    wrap.appendChild(chip);
+  });
+
+  const addBtn = document.createElement('div');
+  addBtn.className = 'folder-add';
+  addBtn.innerHTML = '+';
+  addBtn.onclick = openFolders;
+  wrap.appendChild(addBtn);
+}
+
+function openFolders() {
+  renderFolderScreen();
+  showScreen('folders');
+}
+
+function renderFolderScreen() {
+  const list = document.getElementById('folder-list');
+  list.innerHTML = '';
+  if (folders.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-emoji">📁</div><div class="empty-title">Папок нет</div><div class="empty-sub">Создай первую папку ниже</div></div>';
+  } else {
+    folders.forEach(f => {
+      const count = people.filter(p=>p.folderId===f.id).length;
+      const div = document.createElement('div');
+      div.className = 'folder-item';
+      div.innerHTML = `
+        <div class="folder-item-dot" style="background:${f.color}"></div>
+        <div class="folder-item-name">${f.name}</div>
+        <div class="folder-item-count">${count} чел.</div>
+        <div class="folder-item-del" onclick="deleteFolder('${f.id}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </div>`;
+      list.appendChild(div);
+    });
+  }
+
+  // color picker
+  const cp = document.getElementById('color-picker');
+  cp.innerHTML = '';
+  COLORS.forEach(c => {
+    const btn = document.createElement('div');
+    btn.style.cssText = `width:30px;height:30px;border-radius:50%;background:${c};cursor:pointer;flex-shrink:0;border:2px solid ${c===selectedFolderColor?'#fff':'transparent'};transition:border 0.15s`;
+    btn.onclick = () => { selectedFolderColor=c; renderFolderScreen(); };
+    cp.appendChild(btn);
+  });
+}
+
+function addFolder() {
+  const name = document.getElementById('new-folder-name').value.trim();
+  if (!name) return;
+  folders.push({ id: genId(), name, color: selectedFolderColor });
+  save();
+  document.getElementById('new-folder-name').value = '';
+  renderFolderScreen();
+  renderFolderChips();
+}
+
+function deleteFolder(id) {
+  if (!confirm('Удалить папку? Люди останутся, просто без папки.')) return;
+  folders = folders.filter(f=>f.id!==id);
+  people = people.map(p=>p.folderId===id?{...p,folderId:null}:p);
+  save();
+  renderFolderScreen();
+  renderFolderChips();
+}
+
 // ── LIST ──────────────────────────────────────────
 function renderList() {
+  renderFolderChips();
   const q = document.getElementById('search-input').value.toLowerCase();
-  let filtered = people.map(p => ({...p, days: daysUntilBirthday(p.date)}));
-  if (q) filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
-  if (currentTab === 'soon') filtered = filtered.filter(p => p.days <= 30);
-  if (currentTab === 'month') {
-    const m = new Date().getMonth()+1;
-    filtered = filtered.filter(p => Number(p.date.split('-')[1]) === m);
-  }
-  filtered.sort((a,b) => a.days - b.days);
+  let filtered = people.map(p=>({...p,days:daysUntil(p.date)}));
+  if (q) filtered = filtered.filter(p=>p.name.toLowerCase().includes(q));
+  if (currentTab==='soon') filtered = filtered.filter(p=>p.days<=30);
+  if (currentTab==='month') { const m=new Date().getMonth()+1; filtered=filtered.filter(p=>Number(p.date.split('-')[1])===m); }
+  if (currentFolder!==null) filtered = filtered.filter(p=>p.folderId===currentFolder);
+  filtered.sort((a,b)=>a.days-b.days);
 
-  document.getElementById('list-subtitle').textContent =
-    people.length === 0 ? 'Добавь первого человека' :
-    `${people.length} ${people.length===1?'человек':'человека'} в списке`;
+  document.getElementById('list-subtitle').textContent = people.length===0
+    ? 'Добавь первого человека'
+    : `${people.length} ${people.length===1?'человек':'человека'} в списке`;
 
   const banner = document.getElementById('next-banner');
-  if (people.length > 0 && !q && currentTab==='all') {
-    const next = [...people].map(p=>({...p,days:daysUntilBirthday(p.date)})).sort((a,b)=>a.days-b.days)[0];
+  if (people.length>0 && !q && currentTab==='all' && currentFolder===null) {
+    const next = [...people].map(p=>({...p,days:daysUntil(p.date)})).sort((a,b)=>a.days-b.days)[0];
     banner.classList.remove('hidden');
     document.getElementById('banner-emoji').textContent = urgencyEmoji(next.days);
     document.getElementById('banner-name').textContent = next.name;
-    document.getElementById('banner-days').textContent = next.days===0 ? 'Сегодня!' : `Через ${next.days} ${dayWord(next.days)}`;
+    document.getElementById('banner-days').textContent = next.days===0?'Сегодня!':'Через '+next.days+' '+dayWord(next.days);
+    banner._nextId = next.id;
   } else { banner.classList.add('hidden'); }
 
   const container = document.getElementById('people-list');
   container.innerHTML = '';
 
-  if (filtered.length === 0) {
+  if (filtered.length===0) {
     container.innerHTML = `<div class="empty-state">
-      <div class="empty-emoji">${q?'🔍':currentTab==='soon'?'✅':'🎂'}</div>
-      <div class="empty-title">${q?'Никого не нашли':currentTab==='soon'?'Скоро никого':'Список пуст'}</div>
+      <div class="empty-emoji">${q?'🔍':'🎂'}</div>
+      <div class="empty-title">${q?'Никого не нашли':'Список пуст'}</div>
       <div class="empty-sub">${q?'Попробуй другой запрос':'Нажми + чтобы добавить\nпервого человека'}</div>
     </div>`;
     return;
   }
 
-  const todayP = filtered.filter(p=>p.days===0);
-  const soonP = filtered.filter(p=>p.days>0&&p.days<=7);
-  const restP = filtered.filter(p=>p.days>7);
+  const todayP=filtered.filter(p=>p.days===0);
+  const soonP=filtered.filter(p=>p.days>0&&p.days<=7);
+  const restP=filtered.filter(p=>p.days>7);
 
   function renderCard(p) {
-    const days = p.days;
-    const badgeClass = days===0?'badge-today-color':days<=7?'badge-soon-color':'badge-normal-color';
-    const daysText = days===0?'🎂':days;
-    const daysLabel = days===0?'Сегодня':dayWord(days);
-    const bg = avatarBg(p.name);
-    const div = document.createElement('div');
-    div.className = 'person-card';
-    div.onclick = () => openDetail(p.id);
-    div.innerHTML = `
-      <div class="person-avatar" style="background:${bg}">${initials(p.name)}</div>
+    const days=p.days;
+    const badgeClass=days===0?'badge-today-color':days<=7?'badge-soon-color':'badge-normal-color';
+    const folder=folders.find(f=>f.id===p.folderId);
+    const div=document.createElement('div');
+    div.className='person-card';
+    div.onclick=()=>openDetail(p.id);
+    div.innerHTML=`
+      ${folder?`<div class="person-card-folder" style="background:${folder.color}"></div>`:''}
+      <div class="person-avatar" style="background:${avatarBg(p.name)}">${initials(p.name)}</div>
       <div class="person-info">
         <div class="person-name">${p.name}</div>
         <div class="person-date">${formatDate(p.date)}</div>
+        ${folder?`<div class="person-folder-tag">${folder.name}</div>`:''}
       </div>
       <div class="person-right">
         <div class="badge-wrap">
-          <div class="badge-days ${badgeClass}">${daysText}</div>
-          <div class="badge-label">${daysLabel}</div>
+          <div class="badge-days ${badgeClass}">${days===0?'🎂':days}</div>
+          <div class="badge-label">${days===0?'Сегодня':dayWord(days)}</div>
         </div>
         <div class="arrow-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1728,125 +712,134 @@ function renderList() {
     container.appendChild(div);
   }
 
-  if (todayP.length && currentTab==='all' && !q) {
-    const l=document.createElement('div'); l.className='section-label'; l.textContent='🎂 Сегодня'; container.appendChild(l);
-    todayP.forEach(renderCard);
-  }
-  if (soonP.length && currentTab==='all' && !q) {
-    const l=document.createElement('div'); l.className='section-label'; l.textContent='На этой неделе'; container.appendChild(l);
-    soonP.forEach(renderCard);
-  }
-  if (restP.length && currentTab==='all' && !q) {
-    if (todayP.length||soonP.length) {
-      const l=document.createElement('div'); l.className='section-label'; l.textContent='Все остальные'; container.appendChild(l);
-    }
-    restP.forEach(renderCard);
-  }
-  if (q || currentTab!=='all') filtered.forEach(renderCard);
+  if (todayP.length&&currentTab==='all'&&!q&&currentFolder===null) { addLabel('🎂 Сегодня'); todayP.forEach(renderCard); }
+  if (soonP.length&&currentTab==='all'&&!q&&currentFolder===null) { addLabel('На этой неделе'); soonP.forEach(renderCard); }
+  if (restP.length&&currentTab==='all'&&!q&&currentFolder===null) { if(todayP.length||soonP.length) addLabel('Все остальные'); restP.forEach(renderCard); }
+  if (q||currentTab!=='all'||currentFolder!==null) filtered.forEach(renderCard);
+
+  function addLabel(t) { const l=document.createElement('div'); l.className='section-label'; l.textContent=t; container.appendChild(l); }
+}
+
+function bannerClick() {
+  const id = document.getElementById('next-banner')._nextId;
+  if (id) openDetail(id);
 }
 
 // ── FORM ──────────────────────────────────────────
-function openAdd() {
-  editingId = null;
-  document.getElementById('form-title').textContent = 'Добавить';
-  document.getElementById('f-name').value = '';
-  document.getElementById('f-date').value = '';
-  document.getElementById('f-gift').value = '';
-  document.getElementById('delete-btn').classList.add('hidden');
-  document.querySelectorAll('.notify-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.days==='1');
+function renderFolderPicker(selectedId) {
+  const picker = document.getElementById('folder-picker');
+  picker.innerHTML = '';
+  if (folders.length===0) {
+    picker.innerHTML = `<div style="font-size:13px;color:var(--text-muted)">Папок нет — <span style="color:var(--text);cursor:pointer;text-decoration:underline" onclick="openFolders()">создать</span></div>`;
+    return;
+  }
+  const noneItem = document.createElement('div');
+  noneItem.className='folder-pick-item'+((!selectedId)?' selected':'');
+  noneItem.dataset.fid='';
+  noneItem.innerHTML=`<div class="folder-pick-dot" style="background:#333"></div><div class="folder-pick-name">Без папки</div><div class="folder-pick-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+  noneItem.onclick=()=>selectFolderPick('');
+  picker.appendChild(noneItem);
+  folders.forEach(f=>{
+    const item=document.createElement('div');
+    item.className='folder-pick-item'+(f.id===selectedId?' selected':'');
+    item.dataset.fid=f.id;
+    item.innerHTML=`<div class="folder-pick-dot" style="background:${f.color}"></div><div class="folder-pick-name">${f.name}</div><div class="folder-pick-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+    item.onclick=()=>selectFolderPick(f.id);
+    picker.appendChild(item);
   });
+}
+
+function selectFolderPick(fid) {
+  newPersonFolder = fid||null;
+  document.querySelectorAll('.folder-pick-item').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.fid===fid);
+  });
+}
+
+function openAdd() {
+  editingId=null; newPersonFolder=null;
+  document.getElementById('form-title').textContent='Добавить';
+  document.getElementById('f-name').value='';
+  document.getElementById('f-date').value='';
+  document.getElementById('f-gift').value='';
+  document.getElementById('delete-btn').classList.add('hidden');
+  document.querySelectorAll('.notify-option').forEach(el=>el.classList.toggle('selected',el.dataset.days==='1'));
+  renderFolderPicker(null);
   showScreen('form');
-  setTimeout(() => document.getElementById('f-name').focus(), 300);
+  setTimeout(()=>document.getElementById('f-name').focus(),300);
 }
 
 function openEdit() {
-  const p = people.find(x=>x.id===viewingId);
-  if (!p) return;
-  editingId = p.id;
-  document.getElementById('form-title').textContent = 'Изменить';
-  document.getElementById('f-name').value = p.name;
-  document.getElementById('f-date').value = p.date;
-  document.getElementById('f-gift').value = p.gift||'';
+  const p=people.find(x=>x.id===viewingId); if(!p) return;
+  editingId=p.id; newPersonFolder=p.folderId||null;
+  document.getElementById('form-title').textContent='Изменить';
+  document.getElementById('f-name').value=p.name;
+  document.getElementById('f-date').value=p.date;
+  document.getElementById('f-gift').value=p.gift||'';
   document.getElementById('delete-btn').classList.remove('hidden');
-  const sel = p.notify||[1];
-  document.querySelectorAll('.notify-option').forEach(el => {
-    el.classList.toggle('selected', sel.includes(Number(el.dataset.days)));
-  });
+  const sel=p.notify||[1];
+  document.querySelectorAll('.notify-option').forEach(el=>el.classList.toggle('selected',sel.includes(Number(el.dataset.days))));
+  renderFolderPicker(p.folderId||null);
   showScreen('form');
 }
 
 function toggleNotify(el) { el.classList.toggle('selected'); }
 
 function savePerson() {
-  const name = document.getElementById('f-name').value.trim();
-  const date = document.getElementById('f-date').value;
-  if (!name || !date) { alert('Введи имя и дату рождения'); return; }
-  const gift = document.getElementById('f-gift').value.trim();
-  const notify = [...document.querySelectorAll('.notify-option.selected')].map(el=>Number(el.dataset.days));
-  if (notify.length===0) notify.push(1);
+  const name=document.getElementById('f-name').value.trim();
+  const date=document.getElementById('f-date').value;
+  if(!name||!date){alert('Введи имя и дату рождения');return;}
+  const gift=document.getElementById('f-gift').value.trim();
+  const notify=[...document.querySelectorAll('.notify-option.selected')].map(el=>Number(el.dataset.days));
+  if(notify.length===0) notify.push(1);
+  const folderId=newPersonFolder||null;
 
-  if (editingId) {
-    const idx = people.findIndex(p=>p.id===editingId);
-    people[idx] = {id:editingId, name, date, gift, notify};
+  if(editingId){
+    const idx=people.findIndex(p=>p.id===editingId);
+    people[idx]={id:editingId,name,date,gift,notify,folderId};
   } else {
-    people.push({id:genId(), name, date, gift, notify});
+    people.push({id:genId(),name,date,gift,notify,folderId});
   }
   save();
-  try { if(window.Telegram?.WebApp) window.Telegram.WebApp.sendData(JSON.stringify({action:editingId?'update':'add',name,date,notify})); } catch(e){}
-  showScreen('list');
-  editingId = null;
-  renderList();
+  try{if(window.Telegram?.WebApp)window.Telegram.WebApp.sendData(JSON.stringify({action:editingId?'update':'add',name,date,notify}));}catch(e){}
+  showScreen('list'); editingId=null; renderList();
 }
 
 function deletePerson() {
-  if (!confirm(`Удалить ${people.find(p=>p.id===editingId)?.name}?`)) return;
-  people = people.filter(p=>p.id!==editingId);
-  save();
-  editingId=null; viewingId=null;
-  showScreen('list'); renderList();
+  if(!confirm(`Удалить ${people.find(p=>p.id===editingId)?.name}?`))return;
+  people=people.filter(p=>p.id!==editingId);
+  save(); editingId=null; viewingId=null; showScreen('list'); renderList();
 }
 
 // ── DETAIL ────────────────────────────────────────
 function openDetail(id) {
-  const p = people.find(x=>x.id===id);
-  if (!p) return;
-  viewingId = id;
+  const p=people.find(x=>x.id===id); if(!p) return;
+  viewingId=id;
+  const el=document.getElementById('d-avatar');
+  el.textContent=initials(p.name); el.style.background=avatarBg(p.name);
+  document.getElementById('d-name').textContent=p.name;
+  document.getElementById('d-date').textContent=formatDate(p.date);
 
-  const el = document.getElementById('d-avatar');
-  el.textContent = initials(p.name);
-  el.style.background = avatarBg(p.name);
+  const folder=folders.find(f=>f.id===p.folderId);
+  const ftag=document.getElementById('d-folder-tag');
+  if(folder){ftag.classList.remove('hidden');ftag.innerHTML=`<div style="width:8px;height:8px;border-radius:50%;background:${folder.color}"></div>${folder.name}`;}
+  else{ftag.classList.add('hidden');}
 
-  document.getElementById('d-name').textContent = p.name;
-  document.getElementById('d-date').textContent = formatDate(p.date);
+  const days=daysUntil(p.date);
+  const dEl=document.getElementById('d-days'),lEl=document.getElementById('d-label'),aEl=document.getElementById('d-age');
+  if(days===0){dEl.textContent='🎂';lEl.textContent='Сегодня день рождения!';lEl.style.color='#fff';}
+  else{dEl.textContent=days;dEl.style.color='#fff';lEl.textContent=dayWord(days)+' до дня рождения';lEl.style.color='';}
+  const age=ageNext(p.date); aEl.textContent=age?`Исполнится ${age} лет`:'';
 
-  const days = daysUntilBirthday(p.date);
-  const dEl = document.getElementById('d-days');
-  const lEl = document.getElementById('d-label');
-  const aEl = document.getElementById('d-age');
-
-  if (days===0) {
-    dEl.textContent='🎂'; lEl.textContent='Сегодня день рождения!'; lEl.style.color='#fff';
-  } else {
-    dEl.textContent=days; dEl.style.color='#fff';
-    lEl.textContent=`${dayWord(days)} до дня рождения`; lEl.style.color='';
-  }
-  const age = ageOnNextBirthday(p.date);
-  aEl.textContent = age ? `Исполнится ${age} лет` : '';
-
-  const giftEl = document.getElementById('d-gift-value');
-  if (p.gift) { giftEl.className='info-card-value'; giftEl.textContent=p.gift; }
-  else { giftEl.className='info-card-empty'; giftEl.textContent='Идей пока нет — добавь!'; }
-
-  document.getElementById('d-notify-value').textContent = (p.notify||[1]).map(notifyLabel).join(', ');
+  const gEl=document.getElementById('d-gift-value');
+  if(p.gift){gEl.className='info-card-value';gEl.textContent=p.gift;}
+  else{gEl.className='info-card-empty';gEl.textContent='Идей пока нет — добавь!';}
+  document.getElementById('d-notify-value').textContent=(p.notify||[1]).map(notifyLabel).join(', ');
   showScreen('detail');
 }
 
-// ── TELEGRAM INIT ─────────────────────────────────
-try {
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.ready(); tg.expand(); tg.enableClosingConfirmation(); }
-} catch(e) {}
+// ── TELEGRAM ──────────────────────────────────────
+try{const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();tg.enableClosingConfirmation();}}catch(e){}
 
 renderList();
 </script>
