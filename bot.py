@@ -1,6 +1,6 @@
 """
 Birthday Bot — Telegram Mini App + уведомления
-Зависимости: pip install python-telegram-bot apscheduler
+Зависимости: pip3 install python-telegram-bot apscheduler
 """
 
 import json
@@ -14,14 +14,12 @@ from telegram.ext import (
 )
 
 # ── Конфиг ────────────────────────────────────────────────────────────────
-BOT_TOKEN = "ВАШ_TOKEN_ЗДЕСЬ"
-WEBAPP_URL = "https://your-domain.com/index.html"  # Где хостится index.html
+BOT_TOKEN = ""
+WEBAPP_URL = "https://9263122317f-lab.github.io/birthday/"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ── Хранилище (в продакшне → БД) ─────────────────────────────────────────
-# Структура: { user_id: [ {id, name, date "MM-DD", year, gift, notify:[1,7,14]}, ... ] }
 store: dict[int, list] = {}
 
 
@@ -40,20 +38,21 @@ def save_store():
 
 
 def days_until(date_str: str) -> int:
-    """date_str = '0000-MM-DD'"""
-    _, m, d = date_str.split("-")
+    parts = date_str.split("-")
+    m, d = int(parts[1]), int(parts[2])
     today = date.today()
-    next_bd = date(today.year, int(m), int(d))
+    next_bd = date(today.year, m, d)
     if next_bd < today:
-        next_bd = date(today.year + 1, int(m), int(d))
+        next_bd = date(today.year + 1, m, d)
     return (next_bd - today).days
 
 
 def format_date_ru(date_str: str) -> str:
-    _, m, d = date_str.split("-")
+    parts = date_str.split("-")
+    m, d = int(parts[1]), int(parts[2])
     months = ["января","февраля","марта","апреля","мая","июня",
               "июля","августа","сентября","октября","ноября","декабря"]
-    return f"{int(d)} {months[int(m)-1]}"
+    return f"{d} {months[m-1]}"
 
 
 def day_word(n: int) -> str:
@@ -62,7 +61,6 @@ def day_word(n: int) -> str:
     return "дней"
 
 
-# ── /start ────────────────────────────────────────────────────────────────
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton(
@@ -77,7 +75,6 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# ── /list — список через бота ─────────────────────────────────────────────
 async def cmd_list(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     people = store.get(uid, [])
@@ -111,7 +108,6 @@ async def cmd_list(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# ── Получение данных из Mini App ──────────────────────────────────────────
 async def on_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     try:
@@ -128,7 +124,6 @@ async def on_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             "id": data.get("id") or str(int(datetime.now().timestamp())),
             "name": data["name"],
             "date": data["date"],
-            "year": data.get("year", ""),
             "gift": data.get("gift", ""),
             "notify": data.get("notify", [1]),
         })
@@ -142,8 +137,8 @@ async def on_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         people = store[uid]
         for i, p in enumerate(people):
             if p["id"] == data.get("id"):
-                people[i] = {**p, **{k: data[k] for k in ("name","date","year","gift","notify") if k in data}}
-        await update.message.reply_text("✏️ Обновлено!", parse_mode="Markdown")
+                people[i] = {**p, **{k: data[k] for k in ("name","date","gift","notify") if k in data}}
+        await update.message.reply_text("✏️ Обновлено!")
 
     elif action == "delete":
         store[uid] = [p for p in store[uid] if p["id"] != data.get("id")]
@@ -152,7 +147,6 @@ async def on_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     save_store()
 
 
-# ── Планировщик уведомлений ───────────────────────────────────────────────
 async def check_birthdays(app: Application):
     today = date.today()
     for uid, people in store.items():
@@ -165,23 +159,12 @@ async def check_birthdays(app: Application):
 
             name = p["name"]
             bd_str = format_date_ru(p["date"])
-            age_part = ""
-            if p.get("year"):
-                age = today.year + (1 if d > 0 else 0) - int(p["year"])
-                age_part = f" — исполнится *{age}*"
 
             if d == 0:
-                text = (
-                    f"🎂 Сегодня день рождения у *{name}*{age_part}!\n\n"
-                    f"Не забудь поздравить 🎉"
-                )
+                text = f"🎂 Сегодня день рождения у *{name}*!\n\nНе забудь поздравить 🎉"
             else:
-                gift_hint = f"\n\n🎁 Твоя идея подарка: _{p['gift']}_" if p.get("gift") else ""
-                text = (
-                    f"⏰ Через *{d} {day_word(d)}* день рождения у *{name}*{age_part}\n"
-                    f"📅 {bd_str}"
-                    f"{gift_hint}"
-                )
+                gift_hint = f"\n\n🎁 Идея подарка: _{p['gift']}_" if p.get("gift") else ""
+                text = f"⏰ Через *{d} {day_word(d)}* день рождения у *{name}*\n📅 {bd_str}{gift_hint}"
 
             try:
                 await app.bot.send_message(
@@ -196,27 +179,27 @@ async def check_birthdays(app: Application):
                 logger.warning(f"Не удалось отправить {uid}: {e}")
 
 
-# ── Запуск ────────────────────────────────────────────────────────────────
+async def post_init(app: Application):
+    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    scheduler.add_job(check_birthdays, "cron", hour=9, minute=0, args=[app])
+    scheduler.start()
+    logger.info("Scheduler started ✓")
+
+
 def main():
     global store
     store = load_store()
 
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
 
-    # Хэндлеры
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("list", cmd_list))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, on_webapp_data))
-
-    # Планировщик — проверка каждый день в 09:00
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    scheduler.add_job(
-        check_birthdays,
-        "cron",
-        hour=9, minute=0,
-        args=[app]
-    )
-    scheduler.start()
 
     logger.info("Bot started ✓")
     app.run_polling(drop_pending_updates=True)
