@@ -5,13 +5,30 @@ Birthday Bot — Telegram Mini App + уведомления
 
 import json
 import logging
+import os, threading
 from datetime import date, datetime
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import Update, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     ContextTypes, filters
 )
+
+
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # index.html лежит в корне репо
+PORT = 3000
+
+class Handler(SimpleHTTPRequestHandler):
+def __init__(self, *a, **kw):
+super().__init__(*a, directory=BASE_DIR, **kw)
+
+def serve():
+ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+
+threading.Thread(target=serve, daemon=True).start() # ЭТУ строку — до app.run_polling(drop_pending_updates=True)
 
 # ── Конфиг ────────────────────────────────────────────────────────────────
 BOT_TOKEN = ""
