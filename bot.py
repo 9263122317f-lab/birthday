@@ -22,10 +22,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # index.html лежит в
 PORT = 3000
 
 class Handler(SimpleHTTPRequestHandler):
-def __init__(self, *a, **kw):
-super().__init__(*a, directory=BASE_DIR, **kw)
+    def __init__(self, *a, **kw):
+        super().__init__(*a, directory=BASE_DIR, **kw)
 
 def serve():
+    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
 threading.Thread(target=serve, daemon=True).start() # ЭТУ строку — до app.run_polling(drop_pending_updates=True)
