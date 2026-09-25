@@ -27,9 +27,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 def serve():
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
-ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
-threading.Thread(target=serve, daemon=True).start() # ЭТУ строку — до app.run_polling(drop_pending_updates=True)
+threading.Thread(target=serve, daemon=True).start()
 
 # ── Конфиг ────────────────────────────────────────────────────────────────
 BOT_TOKEN = ""
