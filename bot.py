@@ -1,226 +1,251 @@
 """
-Birthday Bot — Telegram Mini App + уведомления
-Зависимости: pip3 install python-telegram-bot apscheduler
+Birthday Bot — Telegram Bot + HTTP сервер (статика + API)
 """
 
 import json
 import logging
-import os, threading
-from datetime import date, datetime
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import os
+import sqlite3
+import threading
+from datetime import date
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from pathlib import Path
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import Update, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    ContextTypes, filters
-)
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-
-
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # index.html лежит в корне репо
-PORT = 3000
-
-class Handler(SimpleHTTPRequestHandler):
-    def __init__(self, *a, **kw):
-        super().__init__(*a, directory=BASE_DIR, **kw)
-
-def serve():
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
-
-threading.Thread(target=serve, daemon=True).start()
-
-# ── Конфиг ────────────────────────────────────────────────────────────────
-BOT_TOKEN = ""
-WEBAPP_URL = "https://9263122317f-lab.github.io/birthday/"
+# ── Конфиг ────────────────────────────────────────
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+WEBAPP_URL = "https://birthdaytotime.bothost.tech"
+DATA_DIR   = Path(os.environ.get("DATA_DIR", "/app/data"))
+DB_PATH    = DATA_DIR / "birthdays.db"
+BASE_DIR   = Path("/app")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+API_PORT   = 8080
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-store: dict[int, list] = {}
+# ── БД ────────────────────────────────────────────
+def get_db():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
+def init_db():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS people (
+                id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                date TEXT NOT NULL,
+                gift TEXT DEFAULT '',
+                notify TEXT DEFAULT '[1]',
+                folder_id TEXT DEFAULT NULL,
+                PRIMARY KEY (id, user_id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS folders (
+                id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                color TEXT DEFAULT '#6366f1',
+                PRIMARY KEY (id, user_id)
+            )
+        """)
+        conn.commit()
 
-def load_store():
+def get_user_id_from_init(init_data: str):
     try:
-        with open("data.json") as f:
-            raw = json.load(f)
-            return {int(k): v for k, v in raw.items()}
-    except FileNotFoundError:
-        return {}
+        from urllib.parse import unquote, parse_qsl
+        parsed = dict(parse_qsl(unquote(init_data)))
+        user = json.loads(parsed.get("user", "{}"))
+        return int(user.get("id", 0)) or None
+    except Exception:
+        return None
 
+# ── HTTP сервер (статика + API) ───────────────────
+class Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, directory=str(BASE_DIR), **kw)
 
-def save_store():
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(store, f, ensure_ascii=False, indent=2)
+    def log_message(self, format, *args):
+        pass
 
+    def send_json(self, code, data):
+        body = json.dumps(data).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", len(body))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        self.end_headers()
+        self.wfile.write(body)
 
-def days_until(date_str: str) -> int:
-    parts = date_str.split("-")
-    m, d = int(parts[1]), int(parts[2])
+    def get_uid(self):
+        init_data = self.headers.get("X-Telegram-Init-Data", "")
+        uid = get_user_id_from_init(init_data)
+        if not uid:
+            raw = self.headers.get("X-User-Id")
+            uid = int(raw) if raw else None
+        return uid
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        self.end_headers()
+
+    def do_GET(self):
+        if self.path == "/api/data":
+            uid = self.get_uid()
+            if not uid:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            with get_db() as conn:
+                people = [dict(r) for r in conn.execute(
+                    "SELECT * FROM people WHERE user_id=?", (uid,)).fetchall()]
+                folders = [dict(r) for r in conn.execute(
+                    "SELECT * FROM folders WHERE user_id=?", (uid,)).fetchall()]
+            for p in people:
+                p["notify"] = json.loads(p["notify"])
+                p["folderId"] = p.pop("folder_id")
+            self.send_json(200, {"people": people, "folders": folders})
+        else:
+            # Раздаём статику (index.html, шрифты и т.д.)
+            super().do_GET()
+
+    def do_POST(self):
+        if self.path == "/api/data":
+            uid = self.get_uid()
+            if not uid:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            with get_db() as conn:
+                conn.execute("DELETE FROM people WHERE user_id=?", (uid,))
+                conn.execute("DELETE FROM folders WHERE user_id=?", (uid,))
+                for p in body.get("people", []):
+                    conn.execute(
+                        "INSERT INTO people VALUES (?,?,?,?,?,?,?)",
+                        (p["id"], uid, p["name"], p["date"],
+                         p.get("gift",""), json.dumps(p.get("notify",[1])),
+                         p.get("folderId"))
+                    )
+                for f in body.get("folders", []):
+                    conn.execute(
+                        "INSERT INTO folders VALUES (?,?,?,?)",
+                        (f["id"], uid, f["name"], f.get("color","#6366f1"))
+                    )
+                conn.commit()
+            self.send_json(200, {"ok": True})
+        else:
+            self.send_json(404, {"error": "not found"})
+
+def run_server():
+    server = HTTPServer(("0.0.0.0", API_PORT), Handler)
+    logger.info(f"Server running on port {API_PORT}")
+    server.serve_forever()
+
+# ── Telegram Bot ──────────────────────────────────
+def days_until(date_str):
+    p = date_str.split("-")
+    m, d = int(p[1]), int(p[2])
     today = date.today()
-    next_bd = date(today.year, m, d)
-    if next_bd < today:
-        next_bd = date(today.year + 1, m, d)
-    return (next_bd - today).days
+    nxt = date(today.year, m, d)
+    if nxt < today:
+        nxt = date(today.year + 1, m, d)
+    return (nxt - today).days
 
-
-def format_date_ru(date_str: str) -> str:
-    parts = date_str.split("-")
-    m, d = int(parts[1]), int(parts[2])
-    months = ["января","февраля","марта","апреля","мая","июня",
-              "июля","августа","сентября","октября","ноября","декабря"]
-    return f"{d} {months[m-1]}"
-
-
-def day_word(n: int) -> str:
+def day_word(n):
     if n == 1: return "день"
     if 2 <= n <= 4: return "дня"
     return "дней"
 
+def format_date_ru(date_str):
+    p = date_str.split("-")
+    m, d = int(p[1]), int(p[2])
+    months = ["января","февраля","марта","апреля","мая","июня",
+              "июля","августа","сентября","октября","ноября","декабря"]
+    return f"{d} {months[m-1]}"
 
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            "🎂 Открыть список дней рождений",
-            web_app=WebAppInfo(url=WEBAPP_URL)
-        )
-    ]])
     await update.message.reply_text(
-        "Привет! Я помогу не забыть дни рождения близких 🎉\n\n"
-        "Добавляй людей, ставь напоминания — я пришлю уведомление заранее.",
-        reply_markup=keyboard
-    )
-
-
-async def cmd_list(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    people = store.get(uid, [])
-    if not people:
-        await update.message.reply_text(
-            "Список пустой. Добавь людей через приложение 👇",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
-            ]])
-        )
-        return
-
-    sorted_p = sorted(people, key=lambda p: days_until(p["date"]))
-    lines = []
-    for p in sorted_p:
-        d = days_until(p["date"])
-        if d == 0:
-            badge = "🎂 СЕГОДНЯ!"
-        elif d <= 7:
-            badge = f"🎉 через {d} {day_word(d)}"
-        else:
-            badge = f"через {d} {day_word(d)}"
-        lines.append(f"• *{p['name']}* — {format_date_ru(p['date'])} ({badge})")
-
-    await update.message.reply_text(
-        "📋 *Твой список:*\n\n" + "\n".join(lines),
-        parse_mode="Markdown",
+        "Привет! Я помогу не забыть дни рождения 🎉\n\nДанные синхронизируются между устройствами.",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("✏️ Редактировать", web_app=WebAppInfo(url=WEBAPP_URL))
+            InlineKeyboardButton("🎂 Открыть список", web_app=WebAppInfo(url=WEBAPP_URL))
         ]])
     )
 
-
-async def on_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def cmd_list(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    try:
-        data = json.loads(update.message.web_app_data.data)
-    except Exception:
+    with get_db() as conn:
+        people = [dict(r) for r in conn.execute(
+            "SELECT * FROM people WHERE user_id=?", (uid,)).fetchall()]
+    if not people:
+        await update.message.reply_text("Список пустой.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
+            ]]))
         return
+    lines = []
+    for p in sorted(people, key=lambda x: days_until(x["date"])):
+        d = days_until(p["date"])
+        badge = "🎂 СЕГОДНЯ!" if d == 0 else f"через {d} {day_word(d)}"
+        lines.append(f"• *{p['name']}* — {format_date_ru(p['date'])} ({badge})")
+    await update.message.reply_text(
+        "📋 *Список:*\n\n" + "\n".join(lines),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("✏️ Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
+        ]]))
 
-    action = data.get("action")
-    if uid not in store:
-        store[uid] = []
-
-    if action == "add":
-        store[uid].append({
-            "id": data.get("id") or str(int(datetime.now().timestamp())),
-            "name": data["name"],
-            "date": data["date"],
-            "gift": data.get("gift", ""),
-            "notify": data.get("notify", [1]),
-        })
-        await update.message.reply_text(
-            f"✅ *{data['name']}* добавлен!\n"
-            f"День рождения {format_date_ru(data['date'])} — через {days_until(data['date'])} {day_word(days_until(data['date']))}.",
-            parse_mode="Markdown"
-        )
-
-    elif action == "update":
-        people = store[uid]
-        for i, p in enumerate(people):
-            if p["id"] == data.get("id"):
-                people[i] = {**p, **{k: data[k] for k in ("name","date","gift","notify") if k in data}}
-        await update.message.reply_text("✏️ Обновлено!")
-
-    elif action == "delete":
-        store[uid] = [p for p in store[uid] if p["id"] != data.get("id")]
-        await update.message.reply_text("🗑 Удалено.")
-
-    save_store()
-
-
-async def check_birthdays(app: Application):
-    today = date.today()
-    for uid, people in store.items():
+async def check_birthdays(app):
+    with get_db() as conn:
+        uids = [r[0] for r in conn.execute(
+            "SELECT DISTINCT user_id FROM people").fetchall()]
+    for uid in uids:
+        with get_db() as conn:
+            people = [dict(r) for r in conn.execute(
+                "SELECT * FROM people WHERE user_id=?", (uid,)).fetchall()]
         for p in people:
             d = days_until(p["date"])
-            notify_days = p.get("notify", [1])
-
-            if d not in notify_days:
+            notify = json.loads(p["notify"]) if isinstance(p["notify"], str) else p["notify"]
+            if d not in notify:
                 continue
-
-            name = p["name"]
-            bd_str = format_date_ru(p["date"])
-
             if d == 0:
-                text = f"🎂 Сегодня день рождения у *{name}*!\n\nНе забудь поздравить 🎉"
+                text = f"🎂 Сегодня день рождения у *{p['name']}*!\n\nНе забудь поздравить 🎉"
             else:
-                gift_hint = f"\n\n🎁 Идея подарка: _{p['gift']}_" if p.get("gift") else ""
-                text = f"⏰ Через *{d} {day_word(d)}* день рождения у *{name}*\n📅 {bd_str}{gift_hint}"
-
+                gift = f"\n\n🎁 Идея: _{p['gift']}_" if p.get("gift") else ""
+                text = f"⏰ Через *{d} {day_word(d)}* ДР у *{p['name']}*\n📅 {format_date_ru(p['date'])}{gift}"
             try:
                 await app.bot.send_message(
-                    chat_id=uid,
-                    text=text,
-                    parse_mode="Markdown",
+                    chat_id=uid, text=text, parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("📋 Открыть список", web_app=WebAppInfo(url=WEBAPP_URL))
-                    ]])
-                )
+                        InlineKeyboardButton("📋 Список", web_app=WebAppInfo(url=WEBAPP_URL))
+                    ]]))
             except Exception as e:
-                logger.warning(f"Не удалось отправить {uid}: {e}")
+                logger.warning(f"Ошибка {uid}: {e}")
 
-
-async def post_init(app: Application):
+async def post_init(app):
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     scheduler.add_job(check_birthdays, "cron", hour=9, minute=0, args=[app])
     scheduler.start()
     logger.info("Scheduler started ✓")
 
-
-def main():
-    global store
-    store = load_store()
-
-    app = (
-        Application.builder()
-        .token(BOT_TOKEN)
-        .post_init(post_init)
-        .build()
-    )
-
+# ── Запуск ────────────────────────────────────────
+if __name__ == "__main__":
+    init_db()
+    t = threading.Thread(target=run_server, daemon=True)
+    t.start()
+    app = (Application.builder().token(BOT_TOKEN).post_init(post_init).build())
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("list", cmd_list))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, on_webapp_data))
-
     logger.info("Bot started ✓")
     app.run_polling(drop_pending_updates=True)
-
-
-if __name__ == "__main__":
-    main()
