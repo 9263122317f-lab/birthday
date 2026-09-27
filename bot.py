@@ -22,7 +22,7 @@ DATA_DIR   = Path(os.environ.get("DATA_DIR", "/app/data"))
 DB_PATH    = DATA_DIR / "birthdays.db"
 BASE_DIR   = Path("/app")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-API_PORT   = 8080
+API_PORT   = 3000
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
