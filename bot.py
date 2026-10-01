@@ -1,5 +1,5 @@
 """
-Birthday Bot — Telegram Bot + HTTP сервер (статика + API)
+Birthday Bot — Telegram Bot + HTTP сервер на порту 3000
 """
 
 import json
@@ -8,7 +8,7 @@ import os
 import sqlite3
 import threading
 from datetime import date
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -20,9 +20,10 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 WEBAPP_URL = "https://birthdaytotime.bothost.tech"
 DATA_DIR   = Path(os.environ.get("DATA_DIR", "/app/data"))
 DB_PATH    = DATA_DIR / "birthdays.db"
-BASE_DIR   = Path("/app")
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PORT       = 3000
+
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-API_PORT   = 3000
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ def get_user_id_from_init(init_data: str):
 # ── HTTP сервер (статика + API) ───────────────────
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
-        super().__init__(*a, directory=str(BASE_DIR), **kw)
+        super().__init__(*a, directory=BASE_DIR, **kw)
 
     def log_message(self, format, *args):
         pass
@@ -117,7 +118,6 @@ class Handler(SimpleHTTPRequestHandler):
                 p["folderId"] = p.pop("folder_id")
             self.send_json(200, {"people": people, "folders": folders})
         else:
-            # Раздаём статику (index.html, шрифты и т.д.)
             super().do_GET()
 
     def do_POST(self):
@@ -135,23 +135,21 @@ class Handler(SimpleHTTPRequestHandler):
                     conn.execute(
                         "INSERT INTO people VALUES (?,?,?,?,?,?,?)",
                         (p["id"], uid, p["name"], p["date"],
-                         p.get("gift",""), json.dumps(p.get("notify",[1])),
+                         p.get("gift", ""), json.dumps(p.get("notify", [1])),
                          p.get("folderId"))
                     )
                 for f in body.get("folders", []):
                     conn.execute(
                         "INSERT INTO folders VALUES (?,?,?,?)",
-                        (f["id"], uid, f["name"], f.get("color","#6366f1"))
+                        (f["id"], uid, f["name"], f.get("color", "#6366f1"))
                     )
                 conn.commit()
             self.send_json(200, {"ok": True})
         else:
             self.send_json(404, {"error": "not found"})
 
-def run_server():
-    server = HTTPServer(("0.0.0.0", API_PORT), Handler)
-    logger.info(f"Server running on port {API_PORT}")
-    server.serve_forever()
+def serve():
+    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
 # ── Telegram Bot ──────────────────────────────────
 def days_until(date_str):
@@ -217,7 +215,10 @@ async def check_birthdays(app):
         for p in people:
             d = days_until(p["date"])
             notify = json.loads(p["notify"]) if isinstance(p["notify"], str) else p["notify"]
-            if d not in notify:
+            notify = list(set(notify))  # убираем дубли
+            # 0 = сегодня, 1 = "в день рождения" (исторически одно и то же)
+            should_notify = d in notify or (d == 0 and 1 in notify)
+            if not should_notify:
                 continue
             if d == 0:
                 text = f"🎂 Сегодня день рождения у *{p['name']}*!\n\nНе забудь поздравить 🎉"
@@ -242,8 +243,8 @@ async def post_init(app):
 # ── Запуск ────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
-    t = threading.Thread(target=run_server, daemon=True)
-    t.start()
+    threading.Thread(target=serve, daemon=True).start()
+    logger.info(f"Web server started on port {PORT} ✓")
     app = (Application.builder().token(BOT_TOKEN).post_init(post_init).build())
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("list", cmd_list))
