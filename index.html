@@ -901,10 +901,9 @@ function openAdd() {
   document.getElementById('form-title').textContent='Добавить';
   document.getElementById('f-name').value='';
   document.getElementById('f-date').value='';
-  document.getElementById('f-gift').value='';
   document.getElementById('gift-list').innerHTML = '';
   document.getElementById('delete-btn').classList.add('hidden');
-  document.querySelectorAll('.notify-option').forEach(el=>el.classList.toggle('selected',el.dataset.days==='1'));
+  document.querySelectorAll('.notify-option').forEach(el=>el.classList.toggle('selected',el.dataset.days==='0'));
   renderFolderPicker(null);
   showScreen('form');
   setTimeout(()=>document.getElementById('f-name').focus(),300);
