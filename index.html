@@ -259,6 +259,24 @@ body {
 .folder-pick-item.selected .folder-pick-check svg { stroke: var(--save-color); }
 .folder-pick-check svg { stroke: transparent; }
 
+/* SHARE */
+.share-person-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.share-person-item.selected { border-color: rgba(255,255,255,0.3); }
+.share-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: auto; transition: all 0.15s;
+}
+.share-person-item.selected .share-check { background: var(--save-bg); border-color: var(--save-bg); }
+.share-person-item.selected .share-check svg { stroke: var(--save-color); }
+.share-check svg { stroke: transparent; }
+
 /* GIFT IDEAS */
 .gift-item {
   background: var(--card); border: 1px solid var(--border);
@@ -420,6 +438,11 @@ body {
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
   </div>
+  <div style="position:fixed;left:20px;bottom:calc(28px + env(safe-area-inset-bottom,0px));z-index:100">
+    <div onclick="openShare()" style="width:48px;height:48px;border-radius:50%;background:var(--circle);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity 0.15s" id="share-fab">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ FORM ═══ -->
@@ -545,6 +568,37 @@ body {
     <button class="save-btn" onclick="addFolder()" style="margin-top:12px">Создать папку</button>
   </div>
   <div style="height:24px"></div>
+</div>
+
+<!-- ═══ SHARE SCREEN ═══ -->
+<div class="screen" id="screen-share">
+  <div class="header">
+    <div class="header-back" onclick="goBack()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </div>
+    <div class="header-title">Поделиться списком</div>
+  </div>
+  <div style="padding:0 20px">
+    <div style="font-size:14px;color:var(--text-muted);margin-bottom:16px">Выбери кого хочешь добавить в ссылку</div>
+    <div id="share-people-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+  <div style="padding:20px;margin-top:auto">
+    <button class="save-btn" onclick="createShareLink()" id="share-btn">Создать ссылку</button>
+  </div>
+</div>
+
+<!-- ═══ IMPORT SCREEN ═══ -->
+<div class="screen" id="screen-import">
+  <div style="padding:28px 20px 20px">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Приглашение</div>
+    <div class="list-title title-serif">Список дней рождений</div>
+  </div>
+  <div id="import-people-list" style="padding:0 20px;display:flex;flex-direction:column;gap:10px"></div>
+  <div style="padding:20px;margin-top:auto">
+    <div style="font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:12px">Уведомления будут в день рождения</div>
+    <button class="save-btn" onclick="importList()" id="import-btn">Сохранить себе</button>
+    <button class="delete-btn" onclick="goBack()" style="margin-top:8px">Отмена</button>
+  </div>
 </div>
 
 <script>
@@ -990,6 +1044,113 @@ function openDetail(id) {
   showScreen('detail');
 }
 
+// ── SHARE ─────────────────────────────────────────
+let shareToken = null;
+
+function openShare() {
+  const list = document.getElementById('share-people-list');
+  list.innerHTML = '';
+  people.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'share-person-item';
+    div.dataset.id = p.id;
+    div.innerHTML = `
+      <div class="person-avatar" style="width:40px;height:40px;border-radius:50%;background:${avatarBg(p.name)};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0">${initials(p.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600">${p.name}</div>
+        <div style="font-size:13px;color:var(--text-muted)">${formatDate(p.date)}</div>
+      </div>
+      <div class="share-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+    div.onclick = () => div.classList.toggle('selected');
+    list.appendChild(div);
+  });
+  showScreen('share');
+}
+
+async function createShareLink() {
+  const selected = [...document.querySelectorAll('.share-person-item.selected')].map(el => el.dataset.id);
+  if (selected.length === 0) { alert('Выбери хотя бы одного человека'); return; }
+  const btn = document.getElementById('share-btn');
+  btn.textContent = 'Создаю ссылку...'; btn.style.opacity = '0.6';
+  try {
+    const r = await fetch(`${API}/share/create`, {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ people_ids: selected })
+    });
+    const data = await r.json();
+    btn.textContent = 'Создать ссылку'; btn.style.opacity = '1';
+    if (data.url) {
+      try {
+        await navigator.clipboard.writeText(data.url);
+        alert(`Ссылка скопирована!\n\n${data.url}\n\nДействует 30 дней`);
+      } catch(e) {
+        alert(`Ссылка:\n\n${data.url}\n\nДействует 30 дней`);
+      }
+    }
+  } catch(e) {
+    btn.textContent = 'Создать ссылку'; btn.style.opacity = '1';
+    alert('Ошибка — попробуй ещё раз');
+  }
+}
+
+async function checkShareParam() {
+  const params = new URLSearchParams(window.location.search);
+  shareToken = params.get('share');
+  if (!shareToken) return false;
+  try {
+    const r = await fetch(`${API}/share/${shareToken}`);
+    if (!r.ok) { alert('Ссылка устарела или не найдена'); return false; }
+    const data = await r.json();
+    const list = document.getElementById('import-people-list');
+    list.innerHTML = '';
+    data.people.forEach(p => {
+      const d = daysUntil(p.date);
+      const div = document.createElement('div');
+      div.className = 'person-card';
+      div.style.cursor = 'default';
+      div.innerHTML = `
+        <div class="person-avatar" style="background:${avatarBg(p.name)}">${initials(p.name)}</div>
+        <div class="person-info">
+          <div class="person-name">${p.name}</div>
+          <div class="person-date">${formatDate(p.date)}</div>
+        </div>
+        <div class="badge-wrap">
+          <div class="badge-days ${d===0?'badge-today-color':d<=7?'badge-soon-color':'badge-normal-color'}">${d===0?'🎂':d}</div>
+          <div class="badge-label">${d===0?'Сегодня':dayWord(d)}</div>
+        </div>`;
+      list.appendChild(div);
+    });
+    showScreen('import');
+    return true;
+  } catch(e) { return false; }
+}
+
+async function importList() {
+  if (!shareToken) return;
+  const btn = document.getElementById('import-btn');
+  btn.textContent = 'Сохраняю...'; btn.style.opacity = '0.6';
+  try {
+    const r = await fetch(`${API}/share/import`, {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ token: shareToken, notify: [0] })
+    });
+    const data = await r.json();
+    btn.textContent = 'Сохранить себе'; btn.style.opacity = '1';
+    if (data.ok) {
+      await loadFromServer();
+      shareToken = null;
+      // Убираем ?share= из URL
+      window.history.replaceState({}, '', '/');
+      showScreen('list');
+      renderList();
+      alert(`Добавлено ${data.imported} человек!`);
+    }
+  } catch(e) {
+    btn.textContent = 'Сохранить себе'; btn.style.opacity = '1';
+    alert('Ошибка — попробуй ещё раз');
+  }
+}
+
 // ── TELEGRAM + INIT ───────────────────────────────
 (async () => {
   try {
@@ -1002,10 +1163,13 @@ function openDetail(id) {
     }
   } catch(e) {}
 
-  // Показываем лоадер
-  document.getElementById('list-subtitle').textContent = 'Синхронизация...';
-  await loadFromServer();
-  renderList();
+  // Проверяем ссылку шаринга
+  const isShare = await checkShareParam();
+  if (!isShare) {
+    document.getElementById('list-subtitle').textContent = 'Синхронизация...';
+    await loadFromServer();
+    renderList();
+  }
 })();
 </script>
 </body>
