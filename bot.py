@@ -7,7 +7,8 @@ import logging
 import os
 import sqlite3
 import threading
-from datetime import date
+import secrets
+from datetime import date, datetime, timedelta
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -24,7 +25,6 @@ BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 PORT       = 3000
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,8 @@ def init_db():
                 name TEXT NOT NULL,
                 date TEXT NOT NULL,
                 gift TEXT DEFAULT '',
-                notify TEXT DEFAULT '[1]',
+                gifts TEXT DEFAULT '[]',
+                notify TEXT DEFAULT '[0]',
                 folder_id TEXT DEFAULT NULL,
                 PRIMARY KEY (id, user_id)
             )
@@ -57,6 +58,20 @@ def init_db():
                 PRIMARY KEY (id, user_id)
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS shared_lists (
+                token TEXT PRIMARY KEY,
+                owner_id INTEGER NOT NULL,
+                people_ids TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            )
+        """)
+        # Миграция — добавить колонку gifts если её нет
+        try:
+            conn.execute("ALTER TABLE people ADD COLUMN gifts TEXT DEFAULT '[]'")
+        except Exception:
+            pass
         conn.commit()
 
 def get_user_id_from_init(init_data: str):
@@ -68,7 +83,7 @@ def get_user_id_from_init(init_data: str):
     except Exception:
         return None
 
-# ── HTTP сервер (статика + API) ───────────────────
+# ── HTTP сервер ───────────────────────────────────
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=BASE_DIR, **kw)
@@ -77,9 +92,9 @@ class Handler(SimpleHTTPRequestHandler):
         pass
 
     def send_json(self, code, data):
-        body = json.dumps(data).encode()
+        body = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(code)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", len(body))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "*")
@@ -103,6 +118,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        # GET /api/data — данные пользователя
         if self.path == "/api/data":
             uid = self.get_uid()
             if not uid:
@@ -115,27 +131,61 @@ class Handler(SimpleHTTPRequestHandler):
                     "SELECT * FROM folders WHERE user_id=?", (uid,)).fetchall()]
             for p in people:
                 p["notify"] = json.loads(p["notify"])
+                p["gifts"] = json.loads(p.get("gifts") or "[]")
                 p["folderId"] = p.pop("folder_id")
             self.send_json(200, {"people": people, "folders": folders})
+
+        # GET /api/share/<token> — просмотр расшаренного списка
+        elif self.path.startswith("/api/share/"):
+            token = self.path.split("/api/share/")[1].split("?")[0]
+            with get_db() as conn:
+                row = conn.execute(
+                    "SELECT * FROM shared_lists WHERE token=?", (token,)).fetchone()
+            if not row:
+                self.send_json(404, {"error": "not found"})
+                return
+            row = dict(row)
+            if row["expires_at"] < datetime.now().isoformat():
+                self.send_json(410, {"error": "expired"})
+                return
+            people_ids = json.loads(row["people_ids"])
+            with get_db() as conn:
+                people = []
+                for pid in people_ids:
+                    r = conn.execute(
+                        "SELECT * FROM people WHERE id=? AND user_id=?",
+                        (pid, row["owner_id"])).fetchone()
+                    if r:
+                        p = dict(r)
+                        p["notify"] = json.loads(p["notify"])
+                        p["gifts"] = json.loads(p.get("gifts") or "[]")
+                        p["folderId"] = p.pop("folder_id")
+                        people.append(p)
+            self.send_json(200, {"people": people, "owner_id": row["owner_id"]})
+
         else:
             super().do_GET()
 
     def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = json.loads(self.rfile.read(length)) if length else {}
+
+        # POST /api/data — сохранить данные
         if self.path == "/api/data":
             uid = self.get_uid()
             if not uid:
                 self.send_json(401, {"error": "unauthorized"})
                 return
-            length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(length))
             with get_db() as conn:
                 conn.execute("DELETE FROM people WHERE user_id=?", (uid,))
                 conn.execute("DELETE FROM folders WHERE user_id=?", (uid,))
                 for p in body.get("people", []):
                     conn.execute(
-                        "INSERT INTO people VALUES (?,?,?,?,?,?,?)",
+                        "INSERT INTO people VALUES (?,?,?,?,?,?,?,?)",
                         (p["id"], uid, p["name"], p["date"],
-                         p.get("gift", ""), json.dumps(p.get("notify", [1])),
+                         p.get("gift", ""),
+                         json.dumps(p.get("gifts", []), ensure_ascii=False),
+                         json.dumps(p.get("notify", [0])),
                          p.get("folderId"))
                     )
                 for f in body.get("folders", []):
@@ -145,6 +195,72 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                 conn.commit()
             self.send_json(200, {"ok": True})
+
+        # POST /api/share/create — создать ссылку
+        elif self.path == "/api/share/create":
+            uid = self.get_uid()
+            if not uid:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            people_ids = body.get("people_ids", [])
+            if not people_ids:
+                self.send_json(400, {"error": "empty"})
+                return
+            token = secrets.token_urlsafe(12)
+            expires = (datetime.now() + timedelta(days=30)).isoformat()
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO shared_lists VALUES (?,?,?,?,?)",
+                    (token, uid, json.dumps(people_ids),
+                     datetime.now().isoformat(), expires)
+                )
+                conn.commit()
+            self.send_json(200, {
+                "token": token,
+                "url": f"{WEBAPP_URL}/?share={token}"
+            })
+
+        # POST /api/share/import — сохранить чужой список себе
+        elif self.path == "/api/share/import":
+            uid = self.get_uid()
+            if not uid:
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            token = body.get("token")
+            notify = body.get("notify", [0])
+            with get_db() as conn:
+                row = conn.execute(
+                    "SELECT * FROM shared_lists WHERE token=?", (token,)).fetchone()
+            if not row:
+                self.send_json(404, {"error": "not found"})
+                return
+            row = dict(row)
+            people_ids = json.loads(row["people_ids"])
+            imported = 0
+            with get_db() as conn:
+                for pid in people_ids:
+                    r = conn.execute(
+                        "SELECT * FROM people WHERE id=? AND user_id=?",
+                        (pid, row["owner_id"])).fetchone()
+                    if r:
+                        p = dict(r)
+                        # Новый id чтобы не конфликтовал
+                        new_id = secrets.token_urlsafe(8)
+                        try:
+                            conn.execute(
+                                "INSERT INTO people VALUES (?,?,?,?,?,?,?,?)",
+                                (new_id, uid, p["name"], p["date"],
+                                 p.get("gift", ""),
+                                 p.get("gifts", "[]"),
+                                 json.dumps(notify),
+                                 None)
+                            )
+                            imported += 1
+                        except Exception:
+                            pass
+                conn.commit()
+            self.send_json(200, {"ok": True, "imported": imported})
+
         else:
             self.send_json(404, {"error": "not found"})
 
@@ -215,8 +331,7 @@ async def check_birthdays(app):
         for p in people:
             d = days_until(p["date"])
             notify = json.loads(p["notify"]) if isinstance(p["notify"], str) else p["notify"]
-            notify = list(set(notify))  # убираем дубли
-            # 0 = сегодня, 1 = "в день рождения" (исторически одно и то же)
+            notify = list(set(notify))
             should_notify = d in notify or (d == 0 and 1 in notify)
             if not should_notify:
                 continue
@@ -240,11 +355,10 @@ async def post_init(app):
     scheduler.start()
     logger.info("Scheduler started ✓")
 
-# ── Запуск ────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
     threading.Thread(target=serve, daemon=True).start()
-    logger.info(f"Web server started on port {PORT} ✓")
+    logger.info(f"Server started on port {PORT} ✓")
     app = (Application.builder().token(BOT_TOKEN).post_init(post_init).build())
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("list", cmd_list))
